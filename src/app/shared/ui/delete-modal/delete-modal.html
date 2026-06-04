@@ -1,0 +1,13 @@
+<section class="delete-modal" *ngIf="modal as item">
+  <div class="delete-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <span class="ui-eyebrow">Acción destructiva</span>
+    <h3 class="delete-modal__title" id="delete-modal-title">{{ item.title }}</h3>
+    <p class="delete-modal__body">{{ item.body }}</p>
+    <label class="ui-field-label" for="delete-confirmation">Escribe "{{ confirmText }}" para eliminar</label>
+    <input class="ui-input" id="delete-confirmation" name="deleteConfirmation" [ngModel]="confirmation" (ngModelChange)="confirmationChange.emit($event)" autocomplete="off" />
+    <div class="delete-modal__actions">
+      <button class="ui-button ui-button--ghost" type="button" (click)="closeModal.emit()" [disabled]="deletingLanding || deletingSection">Cancelar</button>
+      <button class="ui-button ui-button--danger" type="button" (click)="confirmDelete.emit()" [disabled]="!canConfirm">Eliminar</button>
+    </div>
+  </div>
+</section>

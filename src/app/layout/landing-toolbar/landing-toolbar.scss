@@ -1,0 +1,121 @@
+.landing-toolbar {
+  display: block;
+}
+
+.landing-toolbar__actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+  gap: 16px;
+}
+
+.landing-toolbar__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.landing-toolbar__download svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.landing-toolbar__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.theme-select {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(108px, 1fr) auto;
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background-color: var(--input-bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.theme-select__icon {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border-right: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.theme-select__icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.theme-select__control {
+  min-height: 34px;
+  border: 0;
+  appearance: none;
+  background-color: var(--input-bg);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 30px 0 12px;
+}
+
+.theme-select__control option {
+  background-color: var(--input-bg);
+  color: var(--text);
+}
+
+.theme-select__control optgroup {
+  background-color: var(--input-bg);
+  color: var(--muted-strong);
+}
+
+.theme-select__control:focus {
+  outline: 0;
+}
+
+.theme-select:focus-within {
+  border-color: var(--text);
+}
+
+.theme-select__chevron {
+  position: absolute;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted-strong);
+  border-bottom: 2px solid var(--muted-strong);
+  pointer-events: none;
+  transform: rotate(45deg) translateY(-2px);
+}
+
+@media (max-width: 1100px) {
+  .landing-toolbar__actions { justify-content: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .landing-toolbar__actions { display: grid; grid-template-columns: 1fr; }
+  .theme-select { width: 100%; }
+}

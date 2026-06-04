@@ -1,0 +1,82 @@
+
+.app-notices {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 30;
+  display: grid;
+  gap: 10px;
+  width: min(420px, calc(100vw - 32px));
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.app-notices__toast {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid var(--notice-border);
+  border-radius: 8px;
+  background: var(--notice-bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  padding: 12px 14px 14px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.app-notices__toast--error {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+}
+
+.app-notices__label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.app-notices__text {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.app-notices__progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--button-bg);
+  transform-origin: left center;
+  animation: app-notices-progress var(--app-notices-duration, 2500ms) linear forwards;
+}
+
+.app-notices__toast--error .app-notices__progress {
+  background: var(--danger-bg);
+}
+
+@keyframes app-notices-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (max-width: 560px) {
+  .app-notices {
+    top: 12px;
+    right: auto;
+    left: 50%;
+    width: auto;
+    min-width: calc(100vw - 24px);
+  }
+}

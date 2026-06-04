@@ -1,0 +1,64 @@
+<section class="landing-preview" [class.landing-preview--compact]="compact">
+  <div class="landing-preview__header">
+    <div class="landing-preview__heading">
+      <span class="ui-eyebrow">{{ eyebrow }}</span>
+      <h3 class="landing-preview__title">{{ title }}</h3>
+    </div>
+    <div class="landing-preview__header-actions">
+      <div class="landing-preview__modes" aria-label="Tamano de preview">
+        <button
+          class="landing-preview__mode"
+          *ngFor="let mode of previewModes; trackBy: trackByMode"
+          type="button"
+          [class.landing-preview__mode--active]="previewMode === mode.value"
+          (click)="setPreviewMode(mode.value)"
+        >
+          {{ mode.label }}
+        </button>
+      </div>
+      <div class="landing-preview__preset-row">
+        <div class="landing-preview__presets" aria-label="Preset de tamano">
+          <button
+            class="landing-preview__preset"
+            *ngFor="let preset of activePresets(); trackBy: trackByPreset"
+            type="button"
+            [class.landing-preview__preset--active]="activeWidth() === preset.width"
+            (click)="setPreviewPreset(preset)"
+          >
+            <span>{{ preset.label }}</span>
+            <strong>{{ preset.width }}px</strong>
+          </button>
+        </div>
+        <div class="landing-preview__status">
+          <span class="landing-preview__count">{{ displayCountLabel() }}</span>
+          <span
+            class="landing-preview__css-status"
+            [class.landing-preview__css-status--ok]="tplCss"
+            [title]="tplPath || 'Sin CSS de landing cargado'"
+          >
+            {{ tplCss ? 'CSS landing cargado' : 'Sin CSS landing' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-preview__stage" *ngIf="sections.length; else emptyPreview">
+    <div [class]="deviceClass()" [ngStyle]="deviceStyles()">
+      <header class="landing-preview__device-header">
+        <strong>{{ activeModeLabel() }}</strong>
+        <span class="landing-preview__device-size">{{ activeModeWidth() }}</span>
+      </header>
+
+      <iframe
+        class="landing-preview__frame"
+        title="Preview landing"
+        [srcdoc]="previewSrcdocValue"
+      ></iframe>
+    </div>
+  </div>
+
+  <ng-template #emptyPreview>
+    <p class="landing-preview__empty">{{ emptyText }}</p>
+  </ng-template>
+</section>

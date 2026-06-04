@@ -1,0 +1,120 @@
+DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   ╷
+95 │     @import "group-section";
+   │             ^^^^^^^^^^^^^^^
+   ╵
+    - 95:13  root stylesheet
+
+DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   ╷
+96 │     @import "group-banner";
+   │             ^^^^^^^^^^^^^^
+   ╵
+    - 96:13  root stylesheet
+
+DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   ╷
+97 │     @import "unit-text";
+   │             ^^^^^^^^^^^
+   ╵
+    - 97:13  root stylesheet
+
+DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   ╷
+98 │     @import "unit-card";
+   │             ^^^^^^^^^^^
+   ╵
+    - 98:13  root stylesheet
+
+DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   ╷
+99 │     @import "unit-banner";
+   │             ^^^^^^^^^^^^^
+   ╵
+    - 99:13  root stylesheet
+
+DEPRECATION WARNING [slash-div]: Using / for division outside of calc() is deprecated and will be removed in Dart Sass 2.0.0.
+
+Recommendation: math.div($base-spacing-unit, 1.5) or calc($base-spacing-unit / 1.5)
+
+More info and automated migrator: https://sass-lang.com/d/slash-div
+
+   ╷
+46 │     margin: var(--group-section__margin--title, 0 0 #{$base-spacing-unit / 1.5} 0);
+   │                                                       ^^^^^^^^^^^^^^^^^^^^^^^^
+   ╵
+    _group-section.scss 46:55  @import
+    - 95:13                    root stylesheet
+
+DEPRECATION WARNING [slash-div]: Using / for division outside of calc() is deprecated and will be removed in Dart Sass 2.0.0.
+
+Recommendation: math.div($base-spacing-unit, 1.5) or calc($base-spacing-unit / 1.5)
+
+More info and automated migrator: https://sass-lang.com/d/slash-div
+
+   ╷
+71 │     margin: var(--group-section__margin--subtitle, 0 0 #{$base-spacing-unit / 1.5} 0);
+   │                                                          ^^^^^^^^^^^^^^^^^^^^^^^^
+   ╵
+    _group-section.scss 71:58  @import
+    - 95:13                    root stylesheet
+
+DEPRECATION WARNING [slash-div]: Using / for division outside of calc() is deprecated and will be removed in Dart Sass 2.0.0.
+
+Recommendation: math.div($base-spacing-unit, 2) or calc($base-spacing-unit / 2)
+
+More info and automated migrator: https://sass-lang.com/d/slash-div
+
+    ╷
+158 │     padding: var(--group-section__padding--cta, #{$base-spacing-unit /2 $base-spacing-unit * 2});
+    │                                                   ^^^^^^^^^^^^^^^^^^^^^
+    ╵
+    _group-section.scss 158:51  @import
+    - 95:13                     root stylesheet
+
+DEPRECATION WARNING [slash-div]: Using / for division outside of calc() is deprecated and will be removed in Dart Sass 2.0.0.
+
+Recommendation: math.div($base-spacing-unit, 2) or calc($base-spacing-unit / 2)
+
+More info and automated migrator: https://sass-lang.com/d/slash-div
+
+    ╷
+166 │       padding: var(--group-section__padding-sm--cta, var(--group-section__padding--cta, #{$base-spacing-unit /2 $base-spacing-unit * 2}));
+    │                                                                                           ^^^^^^^^^^^^^^^^^^^^^
+    ╵
+    _group-section.scss 166:91  @content
+    - 21:37                     media-breakpoint()
+    _group-section.scss 165:5   @import
+    - 95:13                     root stylesheet
+
+DEPRECATION WARNING [slash-div]: Using / for division outside of calc() is deprecated and will be removed in Dart Sass 2.0.0.
+
+Recommendation: math.div($base-spacing-unit, 2) or calc($base-spacing-unit / 2)
+
+More info and automated migrator: https://sass-lang.com/d/slash-div
+
+    ╷
+172 │       margin-right: $base-spacing-unit / 2;
+    │                     ^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+    _group-section.scss 172:21  @import
+    - 95:13                     root stylesheet
+
+WARNING: 60 repetitive deprecation warnings omitted.
+Run in verbose mode to see all warnings.
+

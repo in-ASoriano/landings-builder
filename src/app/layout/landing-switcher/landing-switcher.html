@@ -1,0 +1,42 @@
+<section class="landing-switcher">
+  <div class="landing-switcher__picker" [class.landing-switcher__picker--open]="pickerOpen">
+    <button class="landing-switcher__trigger" type="button" (click)="togglePicker()" [attr.aria-expanded]="pickerOpen">
+      <span class="landing-switcher__value">{{ selectedLandingLabel() }}</span>
+      <span class="landing-switcher__chevron" aria-hidden="true"></span>
+    </button>
+
+    <div class="landing-switcher__menu" *ngIf="pickerOpen">
+      <input
+        class="ui-input landing-switcher__search"
+        type="search"
+        [ngModel]="landingFilter"
+        (ngModelChange)="updateLandingFilter($event)"
+        placeholder="4023, alejandro, poolside..."
+        autocomplete="off"
+      />
+
+      <div class="landing-switcher__options" *ngIf="filteredLandings().length">
+        <button
+          class="landing-switcher__option"
+          type="button"
+          *ngFor="let landing of filteredLandings(); trackBy: trackByFile"
+          [class.landing-switcher__option--active]="landing.file === selectedFile"
+          (click)="selectLanding(landing.file)"
+        >
+          <span>{{ landing.file }}</span>
+          <small>{{ landing.sections }} secciones</small>
+        </button>
+      </div>
+
+      <p class="landing-switcher__empty" *ngIf="!filteredLandings().length">No hay landings con ese filtro.</p>
+    </div>
+  </div>
+
+  <button class="ui-button landing-switcher__create" type="button" (click)="openCreateLanding.emit()" [disabled]="creatingLanding">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 5v14"></path>
+      <path d="M5 12h14"></path>
+    </svg>
+    <span>Landing</span>
+  </button>
+</section>

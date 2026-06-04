@@ -1,0 +1,131 @@
+.landing-switcher {
+  display: grid;
+  grid-template-columns: minmax(230px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.landing-switcher__picker {
+  position: relative;
+  display: grid;
+}
+
+.landing-switcher__trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 10px 0 12px;
+  text-align: left;
+}
+
+.landing-switcher__trigger:focus-visible {
+  border-color: var(--text);
+  outline: 0;
+}
+
+.landing-switcher__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-switcher__chevron {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted-strong);
+  border-bottom: 2px solid var(--muted-strong);
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.landing-switcher__menu {
+  position: absolute;
+  z-index: 35;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 8px;
+  min-width: min(440px, calc(100vw - 32px));
+  max-height: min(520px, calc(100dvh - 120px));
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 45px rgb(0 0 0 / 16%);
+  padding: 8px;
+}
+
+.landing-switcher__search {
+  min-height: 36px;
+}
+
+.landing-switcher__options {
+  display: grid;
+  gap: 4px;
+}
+
+.landing-switcher__option {
+  display: grid;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.landing-switcher__option:hover,
+.landing-switcher__option--active {
+  border-color: var(--border);
+  background: var(--panel-soft);
+}
+
+.landing-switcher__option span {
+  font-weight: 800;
+}
+
+.landing-switcher__option small,
+.landing-switcher__empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.landing-switcher__empty {
+  margin: 0;
+  padding: 8px 10px;
+}
+
+.landing-switcher__create {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+}
+
+.landing-switcher__create svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+@media (max-width: 680px) {
+  .landing-switcher {
+    grid-template-columns: 1fr;
+  }
+}

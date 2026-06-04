@@ -1,0 +1,14 @@
+
+<div class="app-notices" *ngIf="error || message" [style.--app-notices-duration]="duration + 'ms'">
+  <button class="app-notices__toast app-notices__toast--error" type="button" *ngIf="error" (click)="dismissError()">
+    <span class="app-notices__label">Error</span>
+    <span class="app-notices__text">{{ error }}</span>
+    <span class="app-notices__progress"></span>
+  </button>
+
+  <button class="app-notices__toast" type="button" *ngIf="message" (click)="dismissMessage()">
+    <span class="app-notices__label">Aviso</span>
+    <span class="app-notices__text">{{ message }}</span>
+    <span class="app-notices__progress"></span>
+  </button>
+</div>

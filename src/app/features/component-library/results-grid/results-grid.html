@@ -1,0 +1,24 @@
+<section class="component-results">
+  <article class="component-card" *ngFor="let component of components; trackBy: trackBySection">
+    <div class="component-card__preview" [class.component-card__preview--empty]="!component.previewImage">
+      <img class="component-card__image" *ngIf="component.previewImage" [src]="component.previewImage" alt="" />
+      <span class="component-card__fallback" *ngIf="!component.previewImage">{{ component.component }}</span>
+    </div>
+    <div class="component-card__body">
+      <div class="component-card__meta">
+        <span>{{ component.file }}</span>
+        <span>#{{ component.sectionIndex }}</span>
+      </div>
+      <h4 class="component-card__title">{{ idValue(component) || component.id || component.component }}</h4>
+      <p class="component-card__text">{{ shortText(component.title) }}</p>
+      <div class="ui-chip-list" *ngIf="component.classes.length">
+        <span class="ui-chip-list__item" *ngFor="let className of component.classes.slice(0, 4)">{{ className }}</span>
+      </div>
+      <label class="ui-field-label">ID al copiar</label>
+      <input class="ui-input" [ngModel]="idValue(component)" (ngModelChange)="appendIdChange.emit({ key: key(component), value: $event })" [name]="key(component)" />
+      <button class="ui-button component-card__copy" type="button" (click)="appendComponent.emit(component)" [disabled]="loading || component.file === selectedFile">
+        Añadir debajo
+      </button>
+    </div>
+  </article>
+</section>

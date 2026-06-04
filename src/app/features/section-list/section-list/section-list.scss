@@ -1,0 +1,285 @@
+.section-list {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px;
+}
+
+.section-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-list__title {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.section-list__help {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.section-list__count {
+  border-radius: 999px;
+  background: var(--panel-soft);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.section-list__header-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.section-list__new-type {
+  display: none;
+  grid-template-columns: auto minmax(112px, 1fr);
+  align-items: center;
+  min-height: 30px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--input-bg);
+}
+
+.section-list__header-actions > .section-list__create {
+  display: none;
+}
+
+.section-list__create-menu {
+  position: relative;
+}
+
+.section-list__create-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 4;
+  display: grid;
+  min-width: 132px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 34%);
+  padding: 4px;
+}
+
+.section-list__create-options button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.section-list__create-options button:hover {
+  background: var(--chip-bg);
+}
+
+.section-list__new-type span {
+  border-right: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 0 8px;
+  text-transform: uppercase;
+}
+
+.section-list__new-type select {
+  min-height: 30px;
+  border: 0;
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 800;
+  padding-block: 0;
+}
+
+.section-list__create {
+  min-height: 30px;
+  border: 1px solid var(--button-bg);
+  border-radius: 7px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 0 10px;
+}
+
+.section-list__create:hover {
+  filter: brightness(0.96);
+}
+
+.section-list__search {
+  display: grid;
+  gap: 6px;
+}
+
+.section-list__items {
+  display: grid;
+  gap: 8px;
+}
+
+.section-list__item {
+  display: grid;
+  grid-template-columns: 8px 28px minmax(0, 1fr) 34px 34px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: grab;
+  text-align: left;
+  padding: 9px 10px;
+  transition: border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease, transform 120ms ease;
+}
+
+.section-list__action {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateX(4px);
+  transition: opacity 120ms ease, transform 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.section-list__action svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+  aspect-ratio: 1;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.section-list__item:hover .section-list__action,
+.section-list__item:focus-visible .section-list__action,
+.section-list__action:focus-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.section-list__action:hover,
+.section-list__action:focus-visible {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  outline: 0;
+}
+
+.section-list__action--duplicate:hover,
+.section-list__action--duplicate:focus-visible {
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+.section-list__item:active {
+  cursor: grabbing;
+}
+
+.section-list__item:hover,
+.section-list__item--active {
+  border-color: var(--button-bg);
+  box-shadow: inset 0 0 0 1px var(--button-bg);
+}
+
+.section-list__item--dragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+}
+
+.section-list__item--drop-target {
+  border-color: var(--success);
+  box-shadow: inset 0 0 0 2px var(--success);
+}
+
+.section-list__drag-handle {
+  width: 8px;
+  height: 24px;
+  background-image: radial-gradient(currentColor 1px, transparent 1.5px);
+  background-position: 0 0;
+  background-size: 4px 4px;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.section-list__index {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.section-list__label {
+  display: grid;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.section-list__label strong,
+.section-list__label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-list__label strong {
+  font-size: 12px;
+}
+
+.section-list__label small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.section-list__empty {
+  margin: 0;
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .section-list {
+    padding: 12px;
+  }
+
+  .section-list__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .section-list__header-actions,
+  .section-list__new-type,
+  .section-list__create {
+    width: 100%;
+  }
+}

@@ -1,0 +1,207 @@
+<section
+  class="component-search"
+  [class.component-search--library]="!showSearch && !compact"
+  [class.component-search--compact]="compact"
+>
+  <ng-container *ngIf="compact; else fullSearchPanel">
+    <div class="component-search__compact-main">
+      <!-- <label class="component-search__compact-label" for="component-library-filter-compact">Componentes con ID</label> -->
+      <div class="component-search__library-select">
+        <input
+          id="component-library-filter-compact"
+          class="ui-input component-search__library-input"
+          type="search"
+          [ngModel]="libraryFilter"
+          (ngModelChange)="updateLibraryFilter($event)"
+          (focus)="openLibraryDropdown()"
+          (click)="openLibraryDropdown()"
+          (keydown.enter)="selectFirstLibraryComponent($event)"
+          (keydown.escape)="closeLibraryDropdown()"
+          [attr.placeholder]="librarySelectPlaceholder()"
+          autocomplete="off"
+        />
+        <button class="component-search__select-toggle" type="button" (click)="toggleLibraryDropdown($event)" aria-label="Abrir selector de componentes">
+          <span></span>
+        </button>
+        <button class="component-search__clear-filter" type="button" *ngIf="libraryFilter" (click)="clearLibraryFilter()">
+          Limpiar
+        </button>
+
+        <div class="component-search__select-menu component-search__select-menu--compact" *ngIf="libraryDropdownOpen">
+          <button
+            class="component-search__select-option"
+            type="button"
+            *ngFor="let component of visibleLibraryComponents(); trackBy: trackBySection"
+            [class.component-search__select-option--active]="isSelected(component)"
+            (mousedown)="$event.preventDefault(); selectLibraryComponent(component)"
+          >
+            <span class="component-search__select-media" [class.component-search__select-media--empty]="!component.previewImage">
+              <img *ngIf="component.previewImage" [src]="component.previewImage" alt="" />
+              <span *ngIf="!component.previewImage">{{ component.component }}</span>
+            </span>
+            <span class="component-search__select-copy">
+              <strong>{{ idValue(component) || component.id || component.component }}</strong>
+              <small>{{ component.file }} - #{{ component.sectionIndex + 1 }} - {{ component.component }}</small>
+              <small *ngIf="assetSummary(component)">{{ assetSummary(component) }}</small>
+              <span>{{ shortText(component.title, 90) }}</span>
+            </span>
+          </button>
+          <p class="component-search__empty" *ngIf="!visibleLibraryComponents().length">{{ libraryEmptyText() }}</p>
+          <p class="component-search__select-note" *ngIf="filteredLibraryComponents().length > visibleLibraryComponents().length">
+            Mostrando 40 de {{ filteredLibraryComponents().length }}. Escribe más para afinar.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-search__compact-actions" *ngIf="previewComponent as component">
+      <input
+        class="ui-input component-search__compact-id"
+        [ngModel]="idValue(component)"
+        (ngModelChange)="appendIdChange.emit({ key: key(component), value: $event })"
+        [name]="key(component)"
+        aria-label="ID al copiar"
+      />
+      <button class="ui-button" type="button" (click)="appendComponent.emit(component)" [disabled]="loading || component.file === selectedFile">
+        Añadir
+      </button>
+    </div>
+  </ng-container>
+
+  <ng-template #fullSearchPanel>
+  <div class="component-search__copy">
+    <span class="ui-eyebrow">{{ eyebrow }}</span>
+    <h3 class="component-search__title">{{ title }}</h3>
+  </div>
+
+  <form class="component-search__form" *ngIf="showSearch" (ngSubmit)="requestSearch()">
+    <div class="component-search__picker">
+      <input class="ui-input" name="query" [ngModel]="query" (ngModelChange)="updateQuery($event)" (keydown.tab)="completeWithTab($event)" (keydown.escape)="closeDropdown()" [attr.placeholder]="searchPlaceholder" />
+      <button class="component-search__suggestion" type="button" *ngIf="autocompleteSuggestion" (click)="applySuggestion.emit(autocompleteSuggestion)">
+        Completar: <strong>{{ autocompleteSuggestion }}</strong>
+      </button>
+
+      <div class="component-search__dropdown" *ngIf="shouldShowDropdown()">
+        <button
+          class="component-search__option"
+          type="button"
+          *ngFor="let component of components | slice: 0 : 12; trackBy: trackBySection"
+          (click)="selectPreview(component)"
+        >
+          <span class="component-search__option-id">{{ idValue(component) || component.id || component.component }}</span>
+          <span class="component-search__option-meta">{{ component.file }} - #{{ component.sectionIndex + 1 }}</span>
+          <span class="component-search__option-meta" *ngIf="assetSummary(component)">{{ assetSummary(component) }}</span>
+          <span class="component-search__option-text">{{ shortText(component.title, 90) }}</span>
+        </button>
+        <p class="component-search__empty" *ngIf="query && !components.length">{{ emptyMessage }}</p>
+      </div>
+    </div>
+    <button class="ui-button" type="submit">Buscar</button>
+  </form>
+
+  <div class="component-search__library-column" *ngIf="!showSearch">
+    <div class="component-search__library-tools">
+      <label class="ui-field-label" for="component-library-filter">Buscar componente</label>
+      <div class="component-search__library-select">
+        <input
+          id="component-library-filter"
+          class="ui-input component-search__library-input"
+          type="search"
+          [ngModel]="libraryFilter"
+          (ngModelChange)="updateLibraryFilter($event)"
+          (focus)="openLibraryDropdown()"
+          (click)="openLibraryDropdown()"
+          (keydown.enter)="selectFirstLibraryComponent($event)"
+          (keydown.escape)="closeLibraryDropdown()"
+          [attr.placeholder]="librarySelectPlaceholder()"
+          autocomplete="off"
+        />
+        <button class="component-search__select-toggle" type="button" (click)="toggleLibraryDropdown($event)" aria-label="Abrir selector de componentes">
+          <span></span>
+        </button>
+        <button class="component-search__clear-filter" type="button" *ngIf="libraryFilter" (click)="clearLibraryFilter()">
+          Limpiar
+        </button>
+
+        <div class="component-search__select-menu" *ngIf="libraryDropdownOpen">
+          <button
+            class="component-search__select-option"
+            type="button"
+            *ngFor="let component of visibleLibraryComponents(); trackBy: trackBySection"
+            [class.component-search__select-option--active]="isSelected(component)"
+            (mousedown)="$event.preventDefault(); selectLibraryComponent(component)"
+          >
+            <span class="component-search__select-media" [class.component-search__select-media--empty]="!component.previewImage">
+              <img *ngIf="component.previewImage" [src]="component.previewImage" alt="" />
+              <span *ngIf="!component.previewImage">{{ component.component }}</span>
+            </span>
+            <span class="component-search__select-copy">
+              <strong>{{ idValue(component) || component.id || component.component }}</strong>
+              <small>{{ component.file }} - #{{ component.sectionIndex + 1 }} - {{ component.component }}</small>
+              <small *ngIf="assetSummary(component)">{{ assetSummary(component) }}</small>
+              <span>{{ shortText(component.title, 90) }}</span>
+            </span>
+          </button>
+          <p class="component-search__empty" *ngIf="!visibleLibraryComponents().length">{{ libraryEmptyText() }}</p>
+          <p class="component-search__select-note" *ngIf="filteredLibraryComponents().length > visibleLibraryComponents().length">
+            Mostrando 40 de {{ filteredLibraryComponents().length }}. Escribe más para afinar.
+          </p>
+        </div>
+      </div>
+      <span class="component-search__library-count">{{ libraryResultText() }}</span>
+    </div>
+  </div>
+
+  <section class="component-search__preview" *ngIf="previewComponent as component">
+    <div class="component-search__preview-media" [class.component-search__preview-media--empty]="!component.previewImage">
+      <img *ngIf="component.previewImage" [src]="component.previewImage" alt="" />
+      <span *ngIf="!component.previewImage">{{ component.component }}</span>
+    </div>
+
+    <div class="component-search__preview-copy">
+      <span class="ui-eyebrow">Componente seleccionado</span>
+      <h4 class="component-search__preview-title">{{ idValue(component) || component.id || component.component }}</h4>
+      <p class="component-search__preview-text">{{ shortText(component.title, 180) }}</p>
+      <div class="component-search__preview-meta">
+        <span>{{ component.file }}</span>
+        <span>#{{ component.sectionIndex + 1 }}</span>
+        <span>{{ component.component }}</span>
+        <span *ngIf="assetSummary(component)">{{ assetSummary(component) }}</span>
+      </div>
+      <div class="ui-chip-list" *ngIf="component.classes.length">
+        <span class="ui-chip-list__item" *ngFor="let className of component.classes.slice(0, 4)">{{ className }}</span>
+      </div>
+      <label class="ui-field-label">ID al copiar</label>
+      <input class="ui-input" [ngModel]="idValue(component)" (ngModelChange)="appendIdChange.emit({ key: key(component), value: $event })" [name]="key(component)" />
+      <button class="ui-button component-search__copy-button" type="button" (click)="appendComponent.emit(component)" [disabled]="loading || component.file === selectedFile">
+        Añadir debajo
+      </button>
+    </div>
+
+    <div class="component-search__json">
+      <span class="ui-eyebrow">JSON de la sección origen</span>
+      <pre>{{ previewLoading ? 'Cargando JSON...' : previewJson }}</pre>
+    </div>
+  </section>
+
+  <p class="component-search__selection-empty" *ngIf="!previewComponent && !showSearch">
+    Selecciona un componente para ver sus datos, su JSON y la preview antes de añadirlo.
+  </p>
+
+  <details class="component-search__responsive-details" *ngIf="previewComponent && previewSections().length">
+    <summary>Preview del componente antes de añadir</summary>
+    <app-landing-preview
+      class="component-search__responsive-preview"
+      [sections]="previewSections()"
+      [tplCss]="previewTplCss"
+      [themeCss]="previewThemeCss"
+      [tplPath]="previewTplPath"
+      eyebrow="Preview componente"
+      title="Antes de añadir"
+      countLabel="1 sección"
+      emptyText="Selecciona un componente para previsualizarlo."
+      [compact]="true"
+    ></app-landing-preview>
+  </details>
+  </ng-template>
+</section>

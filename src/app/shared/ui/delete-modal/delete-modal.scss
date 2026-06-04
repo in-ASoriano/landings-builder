@@ -1,0 +1,43 @@
+.delete-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(17 19 15 / 58%);
+}
+
+.delete-modal__dialog {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 460px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 22px;
+}
+
+.delete-modal__title,
+.delete-modal__body {
+  margin: 0;
+}
+
+.delete-modal__body {
+  color: var(--muted-strong);
+  overflow-wrap: anywhere;
+}
+
+.delete-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 560px) {
+  .delete-modal__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+

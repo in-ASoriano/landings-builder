@@ -1,0 +1,57 @@
+<header class="landing-toolbar">
+  <div class="landing-toolbar__actions">
+    <label class="theme-select">
+      <span class="theme-select__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <circle cx="13.5" cy="6.5" r="2.5"></circle>
+          <circle cx="17.5" cy="10.5" r="2.5"></circle>
+          <circle cx="8" cy="8.5" r="2.5"></circle>
+          <path d="M12 3a9 9 0 0 0 0 18h1.5a2.5 2.5 0 0 0 1.8-4.2 1.4 1.4 0 0 1 1-2.4H18a3 3 0 0 0 3-3A8.4 8.4 0 0 0 12 3Z"></path>
+        </svg>
+      </span>
+      <select
+        class="theme-select__control"
+        name="activeTheme"
+        [ngModel]="activeTheme"
+        (ngModelChange)="emitTheme($event)"
+      >
+        <option *ngFor="let theme of themeOptions; trackBy: trackByTheme" [ngValue]="theme.value">
+          {{ theme.label }}
+        </option>
+      </select>
+      <span class="theme-select__chevron" aria-hidden="true"></span>
+    </label>
+    <button class="ui-button" type="button" (click)="refreshLandings.emit()" [disabled]="loading">Recargar</button>
+    <button class="ui-button ui-button--ghost landing-toolbar__download" type="button" (click)="downloadLanding.emit()" [disabled]="!selectedFile">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3v12"></path>
+        <path d="m7 10 5 5 5-5"></path>
+        <path d="M5 21h14"></path>
+      </svg>
+      <span>Descargar JSON</span>
+    </button>
+    <input
+      #jsonImport
+      class="landing-toolbar__file"
+      type="file"
+      accept="application/json,.json"
+      (change)="emitImport($event)"
+    />
+    <button
+      class="ui-button ui-button--ghost landing-toolbar__download"
+      type="button"
+      (click)="jsonImport.click()"
+      [disabled]="importingLanding"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 21V9"></path>
+        <path d="m7 14 5-5 5 5"></path>
+        <path d="M5 3h14"></path>
+      </svg>
+      <span>{{ importingLanding ? 'Importando...' : 'Importar JSON' }}</span>
+    </button>
+    <button class="ui-button ui-button--danger" type="button" (click)="deleteLanding.emit()" [disabled]="deletingLanding || !selectedFile">
+      Borrar landing
+    </button>
+  </div>
+</header>

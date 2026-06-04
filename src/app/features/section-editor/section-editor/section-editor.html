@@ -1,0 +1,787 @@
+<section class="section-editor" *ngIf="current as section">
+  <div class="section-editor__summary">
+    <div class="section-editor__preview" [class.section-editor__preview--empty]="!section.previewImage">
+      <img class="section-editor__image" *ngIf="section.previewImage" [src]="section.previewImage" alt="" />
+      <span class="section-editor__fallback" *ngIf="!section.previewImage">{{ section.component }}</span>
+    </div>
+    <div class="section-editor__copy">
+      <span class="ui-eyebrow">Sección seleccionada</span>
+      <h3 class="section-editor__title">{{ selectedSectionIndex + 1 }}. {{ section.id || section.component }}</h3>
+      <p class="section-editor__description">{{ shortText(section.title, 220) }}</p>
+      <div class="section-editor__meta">
+        <span>{{ section.component }}</span>
+        <span>{{ section.banners }} banners</span>
+      </div>
+      <div class="ui-chip-list" *ngIf="section.classes.length">
+        <span class="ui-chip-list__item" *ngFor="let className of section.classes">{{ className }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-editor__tabs">
+    <button
+      class="section-editor__tab"
+      type="button"
+      [class.section-editor__tab--active]="activePanel === 'fields'"
+      (click)="setActivePanel('fields')"
+    >
+      Campos
+    </button>
+    <button
+      class="section-editor__tab"
+      type="button"
+      [class.section-editor__tab--active]="activePanel === 'json'"
+      (click)="setActivePanel('json')"
+    >
+      JSON
+    </button>
+  </div>
+
+  <section class="section-editor__visual" *ngIf="activePanel === 'fields' && visualGroups().length">
+    <div class="section-editor__visual-header">
+      <div>
+        <span class="ui-eyebrow">Campos editables</span>
+        <h3 class="section-editor__json-title">Textos, enlaces, media y configuración</h3>
+      </div>
+      <div class="section-editor__category-tabs" aria-label="Filtrar campos editables">
+        <button
+          class="section-editor__category-tab"
+          type="button"
+          *ngFor="let category of fieldCategories"
+          [class.section-editor__category-tab--active]="activeFieldCategory === category.id"
+          [disabled]="categoryCount(category.id) === 0"
+          [title]="category.description"
+          (click)="setActiveFieldCategory(category.id)"
+        >
+          <span>{{ category.label }}</span>
+          <strong>{{ categoryCount(category.id) }}</strong>
+        </button>
+      </div>
+    </div>
+
+    <div class="section-editor__node-selector" *ngIf="visualGroupOptions().length > 1">
+      <span class="ui-eyebrow">Nodo a editar</span>
+      <div class="section-editor__node-list">
+        <button
+          class="section-editor__node-option"
+          type="button"
+          *ngFor="let group of visualGroupOptions(); trackBy: trackByGroup"
+          [class.section-editor__node-option--active]="selectedVisualGroupId() === group.id"
+          [class.section-editor__node-option--dragging]="isDraggingBanner(group)"
+          [class.section-editor__node-option--drop-target]="isDropTargetBanner(group)"
+          [draggable]="isBannerGroup(group)"
+          (dragstart)="startBannerDrag($event, group)"
+          (dragover)="dragOverBanner($event, group)"
+          (drop)="dropBanner($event, group)"
+          (dragend)="endBannerDrag()"
+          (click)="selectVisualGroup(group)"
+        >
+          <span class="section-editor__node-media" [class.section-editor__node-media--empty]="!group.mediaUrl">
+            <img *ngIf="group.mediaType === 'image'" [src]="group.mediaUrl" alt="" />
+            <video *ngIf="group.mediaType === 'video'" [src]="group.mediaUrl" muted loop playsinline preload="metadata"></video>
+            <span *ngIf="!group.mediaUrl">{{ group.selectorLabel }}</span>
+          </span>
+          <span class="section-editor__node-copy">
+            <strong>{{ group.selectorLabel }}</strong>
+            <small>{{ group.component }} - {{ group.fields.length }} campos</small>
+            <em>{{ shortText(group.summary, 80) }}</em>
+          </span>
+        </button>
+      </div>
+
+      <div class="section-editor__banner-actions" *ngIf="selectedBannerGroup() as bannerGroup">
+        <span>{{ bannerGroup.selectorLabel }}</span>
+        <div class="section-editor__new-banner-control">
+          <button
+            class="ui-button ui-button--ghost section-editor__icon-button"
+            type="button"
+            aria-label="Crear banner diferente"
+            title="Crear banner diferente"
+            [attr.aria-expanded]="newBannerMenuOpen"
+            (click)="toggleNewBannerMenu()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+          </button>
+          <div class="section-editor__new-banner-menu" *ngIf="newBannerMenuOpen">
+            <button type="button" (click)="createDifferentBannerAfterSelected('text')">Texto</button>
+            <button type="button" (click)="createDifferentBannerAfterSelected('card')">Card</button>
+            <button type="button" (click)="createDifferentBannerAfterSelected('banner')">Banner</button>
+          </div>
+        </div>
+        <button
+          class="ui-button ui-button--ghost section-editor__icon-button"
+          type="button"
+          aria-label="Subir banner"
+          title="Subir banner"
+          [disabled]="!canMoveSelectedBanner(-1)"
+          (click)="moveSelectedBanner(-1)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m18 15-6-6-6 6"></path>
+          </svg>
+        </button>
+        <button
+          class="ui-button ui-button--ghost section-editor__icon-button"
+          type="button"
+          aria-label="Bajar banner"
+          title="Bajar banner"
+          [disabled]="!canMoveSelectedBanner(1)"
+          (click)="moveSelectedBanner(1)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 9 6 6 6-6"></path>
+          </svg>
+        </button>
+        <button
+          class="ui-button section-editor__icon-button"
+          type="button"
+          aria-label="Duplicar banner"
+          title="Duplicar banner"
+          (click)="duplicateSelectedBanner()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="8" y="8" width="12" height="12" rx="2"></rect>
+            <path d="M4 16V6a2 2 0 0 1 2-2h10"></path>
+          </svg>
+        </button>
+        <button
+          class="ui-button ui-button--danger section-editor__icon-button section-editor__banner-delete"
+          type="button"
+          [attr.aria-label]="isDeleteSelectedBannerPending(bannerGroup) ? 'Confirmar borrado de banner' : 'Borrar banner'"
+          [title]="isDeleteSelectedBannerPending(bannerGroup) ? 'Confirmar borrado de banner' : 'Borrar banner'"
+          [class.section-editor__banner-delete--pending]="isDeleteSelectedBannerPending(bannerGroup)"
+          (click)="requestDeleteSelectedBanner()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 6h18"></path>
+            <path d="M8 6V4h8v2"></path>
+            <path d="M19 6l-1 16H6L5 6"></path>
+            <path d="M10 11v6M14 11v6"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <section class="section-editor__node-inspector" *ngIf="selectedVisualGroup() as selectedGroup">
+      <div class="section-editor__breadcrumb" aria-label="Ruta del nodo seleccionado">
+        <span class="ui-eyebrow">Ruta del nodo</span>
+        <ol>
+          <li *ngFor="let item of selectedNodeBreadcrumb(); trackBy: trackByBreadcrumb">
+            <small>{{ item.label }}</small>
+            <strong>{{ item.value }}</strong>
+          </li>
+        </ol>
+      </div>
+
+      <div class="section-editor__naming" *ngIf="!isBannerGroup(selectedGroup)">
+        <span class="ui-eyebrow">Naming</span>
+        <div class="section-editor__naming-grid">
+          <label>
+            <span>ID de sección</span>
+            <div class="section-editor__naming-control">
+              <input
+                class="ui-input"
+                type="text"
+                [ngModel]="currentNodeId()"
+                placeholder="id-del-componente"
+                (ngModelChange)="updateCurrentNodeId($event)"
+              />
+              <button
+                class="ui-button ui-button--ghost section-editor__icon-button"
+                type="button"
+                aria-label="Borrar ID de sección"
+                title="Borrar ID de sección"
+                [disabled]="!currentNodeId()"
+                (click)="clearCurrentNodeId()"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </label>
+          <label>
+            <span>Sugerencia</span>
+            <input class="ui-input" type="text" [ngModel]="suggestedNodeId()" readonly />
+          </label>
+          <button
+            class="ui-button"
+            type="button"
+            [disabled]="!suggestedNodeId() || suggestedNodeId() === currentNodeId()"
+            (click)="applySuggestedNodeId()"
+          >
+            Usar sugerencia
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <p class="ui-notice ui-notice--error" *ngIf="visualFormError">{{ visualFormError }}</p>
+
+    <details
+      class="section-editor__field-group"
+      *ngFor="let group of visibleVisualGroups(); trackBy: trackByGroup"
+      open
+    >
+      <summary class="section-editor__field-summary">
+        <span>
+          {{ group.title }}
+          <em>{{ group.subtitle }}</em>
+        </span>
+        <small>{{ group.fields.length }} campos</small>
+      </summary>
+
+      <ng-container *ngIf="responsiveBreakpointOptions(group) as responsiveOptions">
+        <div
+          *ngIf="responsiveOptions.length"
+          class="section-editor__responsive-actions"
+        >
+          <span class="ui-eyebrow">Responsive</span>
+          <button
+            class="ui-button ui-button--ghost"
+            type="button"
+            *ngFor="let option of responsiveOptions"
+            (click)="addResponsiveBreakpoint(group, option.root, option.breakpoint)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </ng-container>
+
+      <div
+        class="section-editor__field-grid"
+        [class.section-editor__field-grid--compact]="groupHasResponsiveFields(group)"
+      >
+        <ng-container *ngFor="let field of group.fields; trackBy: trackByField">
+          <h4 class="section-editor__responsive-title" *ngIf="isFirstResponsiveField(group, field, 'direction')">Dirección</h4>
+          <h4 class="section-editor__responsive-title" *ngIf="isFirstResponsiveField(group, field, 'columns')">Columnas</h4>
+
+          <h4 class="section-editor__responsive-title" *ngIf="isFirstResponsiveField(group, field, 'horizontal')">Horizontal</h4>
+          <h4 class="section-editor__responsive-title" *ngIf="isFirstResponsiveField(group, field, 'vertical')">Vertical</h4>
+          <h4 class="section-editor__responsive-title" *ngIf="isFirstResponsiveField(group, field, 'packing')">Packing</h4>
+
+          <span
+            class="section-editor__responsive-break"
+            *ngIf="startsAfterResponsiveFields(group, field)"
+            aria-hidden="true"
+          ></span>
+
+          <div
+            class="section-editor__field"
+            [class.section-editor__field--wide]="isWideField(field)"
+            [class.section-editor__field--media]="field.category === 'media'"
+            [class.section-editor__field--responsive]="isResponsiveField(field)"
+            [class.section-editor__field--direction]="responsiveFieldRoot(field) === 'direction'"
+            [class.section-editor__field--columns]="responsiveFieldRoot(field) === 'columns'"
+            [class.section-editor__field--alignment]="isAlignmentResponsiveField(field)"
+            [class.section-editor__field--compact]="isCompactField(field)"
+            [class.section-editor__field--after-responsive]="isAfterResponsiveFields(group, field)"
+          >
+          <span class="section-editor__field-label">
+            <strong [title]="displayFieldTitle(field)">{{ displayFieldLabel(field) }}</strong>
+          </span>
+
+          <ng-container [ngSwitch]="field.kind">
+            <div
+              *ngSwitchCase="'localized'"
+              class="section-editor__localized"
+              [class.section-editor__localized--compact]="canManageLocales(field)"
+            >
+              <div class="section-editor__language-head" *ngIf="nonDefaultLocales(field).length">
+                <span>{{ localeSummary(field) }}</span>
+                <button
+                  class="section-editor__language-copy"
+                  type="button"
+                  [disabled]="!canCopyToEmptyLocales(field)"
+                  (click)="copySourceToEmptyLocales(field)"
+                >
+                  Copiar base a vacíos
+                </button>
+              </div>
+
+              <ng-container *ngIf="defaultLocale(field) as defaultField">
+                <label
+                  class="section-editor__locale-main"
+                  [class.section-editor__locale-main--locked]="isDefaultLocaleLocked(field, defaultField)"
+                >
+                  <span>{{ defaultField.label }}</span>
+                  <div
+                    class="section-editor__text-control-row"
+                    [class.section-editor__text-control-row--with-tag]="field.htmlTagField"
+                  >
+                    <div class="section-editor__text-control-main">
+                      <select
+                        *ngIf="defaultField.options?.length; else defaultLocaleTextControl"
+                        class="ui-select section-editor__select"
+                        [ngModel]="localeDisplayValue(field, defaultField)"
+                        [disabled]="isDefaultLocaleLocked(field, defaultField)"
+                        (ngModelChange)="updateLocalizedField(field, defaultField, $event)"
+                      >
+                        <option value="">Sin tipo</option>
+                        <option *ngFor="let option of defaultField.options || []" [value]="option">{{ option }}</option>
+                      </select>
+                      <ng-template #defaultLocaleTextControl>
+                      <textarea
+                        *ngIf="defaultField.multiline; else defaultLocaleInput"
+                        class="section-editor__field-textarea"
+                        [ngModel]="localeDisplayValue(field, defaultField)"
+                        [disabled]="isDefaultLocaleLocked(field, defaultField)"
+                        [placeholder]="isDefaultLocaleLocked(field, defaultField) ? 'Se edita por idiomas' : ''"
+                        (ngModelChange)="updateLocalizedField(field, defaultField, $event)"
+                      ></textarea>
+                      <ng-template #defaultLocaleInput>
+                        <input
+                          class="ui-input"
+                          type="text"
+                          [ngModel]="localeDisplayValue(field, defaultField)"
+                          [disabled]="isDefaultLocaleLocked(field, defaultField)"
+                          [placeholder]="isDefaultLocaleLocked(field, defaultField) ? 'Se edita por idiomas' : ''"
+                          (ngModelChange)="updateLocalizedField(field, defaultField, $event)"
+                        />
+                      </ng-template>
+                      </ng-template>
+                    </div>
+                    <div class="section-editor__html-tag-column" *ngIf="field.htmlTagField as htmlTagField">
+                      <select
+                        class="ui-select section-editor__select"
+                        aria-label="html_tag"
+                        title="html_tag"
+                        [ngModel]="htmlTagField.value"
+                        (ngModelChange)="updateVisualField(htmlTagField, $event)"
+                      >
+                        <option *ngFor="let option of htmlTagField.options || []" [value]="option">{{ option }}</option>
+                      </select>
+                    </div>
+                  </div>
+                </label>
+              </ng-container>
+
+              <div class="section-editor__language-tools" *ngIf="canManageLocales(field)">
+                <span>Añadir idioma</span>
+                <button
+                  class="section-editor__language-chip"
+                  type="button"
+                  *ngFor="let localeKey of availableLocaleKeys(field)"
+                  (click)="addLocaleToField(field, localeKey)"
+                >
+                  {{ localeKey }}
+                </button>
+              </div>
+
+              <button
+                *ngIf="nonDefaultLocales(field).length || canManageLocales(field)"
+                class="section-editor__language-toggle"
+                type="button"
+                [class.section-editor__language-toggle--active]="isLanguageFieldOpen(field)"
+                [disabled]="!nonDefaultLocales(field).length && !canManageLocales(field)"
+                (click)="toggleLanguageField(field)"
+              >
+                {{ isLanguageFieldOpen(field) ? 'Ocultar idiomas' : 'Editar idiomas' }} · {{ localeSummary(field) }}
+              </button>
+
+              <div
+                class="section-editor__language-panel"
+                *ngIf="isLanguageFieldOpen(field) && (nonDefaultLocales(field).length || canManageLocales(field))"
+              >
+                <div class="section-editor__language-tools section-editor__language-tools--panel" *ngIf="canManageLocales(field) && availableLocaleKeys(field).length">
+                  <span>Añadir idioma</span>
+                  <button
+                    class="section-editor__language-chip"
+                    type="button"
+                    *ngFor="let localeKey of availableLocaleKeys(field)"
+                    (click)="addLocaleToField(field, localeKey)"
+                  >
+                    {{ localeKey }}
+                  </button>
+                </div>
+
+                <div class="section-editor__language-tabs" *ngIf="nonDefaultLocales(field).length">
+                  <button
+                    class="section-editor__language-tab"
+                    type="button"
+                    *ngFor="let locale of nonDefaultLocales(field)"
+                    [class.section-editor__language-tab--active]="activeLanguageEntry(field)?.key === locale.key"
+                    [class.section-editor__language-tab--filled]="hasLocaleValue(locale)"
+                    (click)="setActiveLanguageTab(field, locale)"
+                  >
+                    {{ locale.key }}
+                    <span class="section-editor__language-status" *ngIf="hasLocaleValue(locale)">ok</span>
+                  </button>
+                </div>
+
+                <label class="section-editor__locale-main" *ngIf="activeLanguageEntry(field) as activeLocale">
+                  <span class="section-editor__active-language-head">
+                    <span>{{ activeLocale.label }}</span>
+                    <button
+                      class="section-editor__language-clear"
+                      type="button"
+                      [disabled]="!hasLocaleValue(activeLocale)"
+                      (click)="clearLanguageLocale(field, activeLocale)"
+                    >
+                      Vaciar
+                    </button>
+                    <button
+                      class="section-editor__language-clear"
+                      type="button"
+                      *ngIf="canManageLocales(field)"
+                      (click)="removeLocaleFromField(field, activeLocale)"
+                    >
+                      Quitar idioma
+                    </button>
+                  </span>
+                  <select
+                    *ngIf="activeLocale.options?.length; else activeLocaleTextControl"
+                    class="ui-select section-editor__select"
+                    [ngModel]="activeLocale.value"
+                    (ngModelChange)="updateLocalizedField(field, activeLocale, $event)"
+                  >
+                    <option value="">Usar default</option>
+                    <option *ngFor="let option of activeLocale.options || []" [value]="option">{{ option }}</option>
+                  </select>
+                  <ng-template #activeLocaleTextControl>
+                  <textarea
+                    *ngIf="activeLocale.multiline; else activeLocaleInput"
+                    class="section-editor__field-textarea"
+                    [ngModel]="activeLocale.value"
+                    placeholder="Vacío usa default"
+                    (ngModelChange)="updateLocalizedField(field, activeLocale, $event)"
+                  ></textarea>
+                  <ng-template #activeLocaleInput>
+                    <input
+                      class="ui-input"
+                      type="text"
+                      [ngModel]="activeLocale.value"
+                      placeholder="Vacío usa default"
+                      (ngModelChange)="updateLocalizedField(field, activeLocale, $event)"
+                    />
+                  </ng-template>
+                  </ng-template>
+                </label>
+              </div>
+            </div>
+
+            <select
+              *ngSwitchCase="'boolean'"
+              class="ui-select section-editor__select"
+              [ngModel]="field.value"
+              (ngModelChange)="updateVisualField(field, $event)"
+            >
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+
+            <div
+              *ngSwitchCase="'select'"
+              class="section-editor__responsive-control"
+              [class.section-editor__responsive-control--removable]="canRemoveResponsiveBreakpoint(field)"
+            >
+              <select
+                class="ui-select section-editor__select"
+                [ngModel]="field.value"
+                (ngModelChange)="updateVisualField(field, $event)"
+              >
+                <option value="">Sin tipo</option>
+                <option *ngFor="let option of field.options || []" [value]="option">{{ option }}</option>
+              </select>
+              <button
+                *ngIf="canRemoveResponsiveBreakpoint(field)"
+                class="section-editor__property-remove section-editor__responsive-remove"
+                type="button"
+                [attr.aria-label]="'Eliminar ' + displayFieldHint(field)"
+                [title]="'Eliminar ' + displayFieldHint(field)"
+                (click)="removeResponsiveBreakpoint(field)"
+              >
+                ×
+              </button>
+            </div>
+
+            <textarea
+              *ngSwitchCase="'json'"
+              class="section-editor__field-textarea section-editor__field-textarea--code"
+              spellcheck="false"
+              [ngModel]="field.value"
+              (ngModelChange)="updateVisualField(field, $event)"
+            ></textarea>
+
+            <div
+              *ngSwitchCase="'properties'"
+              class="section-editor__properties-editor"
+            >
+              <div class="section-editor__property-list" *ngIf="propertyItems(field).length; else emptyProperties">
+                <div class="section-editor__property-row" *ngFor="let property of propertyItems(field); trackBy: trackByProperty">
+                  <input
+                    class="ui-input section-editor__property-key"
+                    type="text"
+                    [ngModel]="property.key"
+                    (blur)="updatePropertyKey(field, property.key, $any($event.target).value)"
+                    aria-label="Nombre de custom property"
+                  />
+                  <input
+                    class="ui-input section-editor__property-value"
+                    type="text"
+                    [ngModel]="property.value"
+                    (ngModelChange)="updatePropertyValue(field, property.key, $event)"
+                    aria-label="Valor de custom property"
+                  />
+                  <button
+                    class="section-editor__property-remove"
+                    type="button"
+                    aria-label="Borrar custom property"
+                    (click)="removeProperty(field, property.key)"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <ng-template #emptyProperties>
+                <p class="section-editor__class-empty">Sin custom properties.</p>
+              </ng-template>
+
+              <div class="section-editor__property-add">
+                <input
+                  #propertyKeyInput
+                  class="ui-input"
+                  type="text"
+                  [placeholder]="customPropertyKeyPlaceholder(field)"
+                  [ngModel]="propertyKeyInputValue(field)"
+                  (ngModelChange)="updatePropertyKeyInput(field, $event)"
+                  (keydown)="handlePropertyAddKeydown($event, field, propertyKeyInput, propertyValueInput)"
+                />
+                <input
+                  #propertyValueInput
+                  class="ui-input"
+                  type="text"
+                  [placeholder]="customPropertyValuePlaceholder(field)"
+                  (keydown)="handlePropertyAddKeydown($event, field, propertyKeyInput, propertyValueInput)"
+                />
+                <button
+                  class="ui-button ui-button--ghost section-editor__icon-button"
+                  type="button"
+                  aria-label="Añadir custom property"
+                  title="Añadir custom property"
+                  (click)="addPropertyFromInputs(field, propertyKeyInput, propertyValueInput)"
+                >
+                  Añadir
+                </button>
+              </div>
+              <div class="section-editor__property-suggestions" *ngIf="customPropertySuggestions(field, propertyKeyInputValue(field)).length">
+                <button
+                  type="button"
+                  *ngFor="let propertyName of customPropertySuggestions(field, propertyKeyInputValue(field)); let suggestionIndex = index"
+                  [class.section-editor__suggestion--active]="isActivePropertySuggestion(field, suggestionIndex)"
+                  [attr.data-suggestion-kind]="'property'"
+                  [attr.data-field-id]="field.id"
+                  [attr.data-index]="suggestionIndex"
+                  (click)="addSuggestedCustomProperty(field, propertyName, propertyKeyInput, propertyValueInput)"
+                  (keydown)="handlePropertySuggestionKeydown($event, field, propertyName, propertyKeyInput, propertyValueInput)"
+                >
+                  {{ propertyName }}
+                </button>
+              </div>
+              <p class="section-editor__class-help" *ngIf="customPropertyHelpText(field)">{{ customPropertyHelpText(field) }}</p>
+            </div>
+
+            <div
+              *ngSwitchCase="'list'"
+              class="section-editor__class-editor"
+            >
+              <div class="section-editor__class-chips" *ngIf="listItems(field).length; else emptyClassList">
+                <span class="section-editor__class-chip" *ngFor="let className of listItems(field); let classIndex = index">
+                  <span>{{ className }}</span>
+                  <button type="button" aria-label="Borrar clase" (click)="removeListItem(field, classIndex)">×</button>
+                </span>
+              </div>
+              <ng-template #emptyClassList>
+                <p class="section-editor__class-empty">Sin clases personalizadas.</p>
+              </ng-template>
+              <div class="section-editor__class-add">
+                <input
+                  #classInput
+                  class="ui-input"
+                  type="text"
+                  placeholder="añadir-clase"
+                  [ngModel]="classInputValue(field)"
+                  (ngModelChange)="updateClassInput(field, $event)"
+                  (keydown)="handleListInputKeydown($event, field, classInput)"
+                />
+                <button
+                  class="ui-button ui-button--ghost section-editor__icon-button"
+                  type="button"
+                  aria-label="Añadir clase"
+                  title="Añadir clase"
+                  (click)="addListItem(field, classInputValue(field)); classInput.value = ''"
+                >
+                  Añadir
+                </button>
+              </div>
+              <div class="section-editor__class-suggestions" *ngIf="utilityClassSuggestions(field, classInputValue(field)).length">
+                <span>Utilities</span>
+                <button
+                  type="button"
+                  *ngFor="let className of utilityClassSuggestions(field, classInputValue(field)); let suggestionIndex = index"
+                  [class.section-editor__suggestion--active]="isActiveUtilitySuggestion(field, suggestionIndex)"
+                  [attr.data-suggestion-kind]="'utility'"
+                  [attr.data-field-id]="field.id"
+                  [attr.data-index]="suggestionIndex"
+                  (click)="addSuggestedUtilityClass(field, className, classInput)"
+                  (keydown)="handleUtilitySuggestionKeydown($event, field, classInput, className)"
+                >
+                  {{ className }}
+                </button>
+              </div>
+              <p class="section-editor__class-help" *ngIf="utilityHelpText(field)">{{ utilityHelpText(field) }}</p>
+            </div>
+
+            <ng-container *ngSwitchDefault>
+              <textarea
+                *ngIf="field.multiline; else singleLineField"
+                class="section-editor__field-textarea"
+                [ngModel]="field.value"
+                (ngModelChange)="updateVisualField(field, $event)"
+              ></textarea>
+
+              <ng-template #singleLineField>
+                <div class="section-editor__responsive-control" [class.section-editor__responsive-control--removable]="canRemoveResponsiveBreakpoint(field)">
+                  <input
+                    class="ui-input"
+                    [type]="inputType(field)"
+                    [attr.inputmode]="numericInputMode(field)"
+                    [attr.pattern]="numericInputMode(field) ? '[0-9]*' : null"
+                    [ngModel]="field.value"
+                    (keydown)="handleNumericFieldKeydown($event, field)"
+                    (paste)="handleNumericFieldPaste($event, field)"
+                    (ngModelChange)="updateVisualField(field, $event)"
+                  />
+                  <button
+                    *ngIf="canRemoveResponsiveBreakpoint(field)"
+                    class="section-editor__property-remove section-editor__responsive-remove"
+                    type="button"
+                    [attr.aria-label]="'Eliminar ' + displayFieldHint(field)"
+                    [title]="'Eliminar ' + displayFieldHint(field)"
+                    (click)="removeResponsiveBreakpoint(field)"
+                  >
+                    ×
+                  </button>
+                </div>
+              </ng-template>
+
+              <div class="section-editor__media-preview" *ngIf="mediaFieldKind(field) as mediaKind">
+                <img *ngIf="mediaKind === 'image'" [src]="field.value" alt="" />
+                <video *ngIf="mediaKind === 'video'" [src]="field.value" muted loop playsinline controls preload="metadata"></video>
+              </div>
+            </ng-container>
+          </ng-container>
+          </div>
+        </ng-container>
+
+      </div>
+    </details>
+
+    <div class="section-editor__actions section-editor__actions--fields">
+      <button class="ui-button ui-button--ghost section-editor__icon-button" type="button" aria-label="Duplicar sección" title="Duplicar sección" (click)="duplicateSection.emit()" [disabled]="duplicatingSection">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="8" y="8" width="12" height="12" rx="2"></rect>
+          <path d="M4 16V6a2 2 0 0 1 2-2h10"></path>
+        </svg>
+      </button>
+      <button class="ui-button ui-button--ghost section-editor__icon-button" type="button" aria-label="Añadir banner" title="Añadir banner" (click)="addBanner.emit()" [disabled]="addingBanner">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14M5 12h14"></path>
+        </svg>
+      </button>
+      <button class="ui-button section-editor__icon-button" type="button" aria-label="Guardar sección" title="Guardar sección" (click)="saveSection.emit()" [disabled]="savingSection">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+          <path d="M17 21v-8H7v8M7 3v5h9"></path>
+        </svg>
+      </button>
+      <button class="ui-button ui-button--danger section-editor__icon-button" type="button" aria-label="Borrar sección" title="Borrar sección" (click)="deleteSection.emit()" [disabled]="deletingSection">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 6h18"></path>
+          <path d="M8 6V4h8v2"></path>
+          <path d="M19 6l-1 16H6L5 6"></path>
+          <path d="M10 11v6M14 11v6"></path>
+        </svg>
+      </button>
+      <button class="ui-button ui-button--ghost" type="button" (click)="duplicateSection.emit()" [disabled]="duplicatingSection">Duplicar sección</button>
+      <button class="ui-button ui-button--ghost" type="button" (click)="addBanner.emit()" [disabled]="addingBanner">Añadir banner</button>
+      <button class="ui-button" type="button" (click)="saveSection.emit()" [disabled]="savingSection">Guardar sección</button>
+      <button class="ui-button ui-button--danger" type="button" (click)="deleteSection.emit()" [disabled]="deletingSection">Borrar sección</button>
+    </div>
+  </section>
+
+  <section class="section-editor__json-panel" *ngIf="activePanel === 'json'">
+    <div class="section-editor__json-toolbar">
+      <div>
+        <span class="ui-eyebrow">JSON de la sección</span>
+        <h3 class="section-editor__json-title">Editar datos, textos, imágenes y custom properties</h3>
+      </div>
+      <div class="section-editor__actions">
+        <button class="ui-button ui-button--ghost section-editor__icon-button" type="button" aria-label="Formatear JSON" title="Formatear JSON" (click)="formatSection.emit()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h10M4 17h16"></path>
+          </svg>
+        </button>
+        <button class="ui-button ui-button--ghost section-editor__icon-button" type="button" aria-label="Duplicar sección" title="Duplicar sección" (click)="duplicateSection.emit()" [disabled]="duplicatingSection">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="8" y="8" width="12" height="12" rx="2"></rect>
+            <path d="M4 16V6a2 2 0 0 1 2-2h10"></path>
+          </svg>
+        </button>
+        <button class="ui-button ui-button--ghost section-editor__icon-button" type="button" aria-label="Añadir banner" title="Añadir banner" (click)="addBanner.emit()" [disabled]="addingBanner">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14"></path>
+          </svg>
+        </button>
+        <button class="ui-button section-editor__icon-button" type="button" aria-label="Guardar sección" title="Guardar sección" (click)="saveSection.emit()" [disabled]="savingSection">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+            <path d="M17 21v-8H7v8M7 3v5h9"></path>
+          </svg>
+        </button>
+        <button class="ui-button ui-button--danger section-editor__icon-button" type="button" aria-label="Borrar sección" title="Borrar sección" (click)="deleteSection.emit()" [disabled]="deletingSection">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 6h18"></path>
+            <path d="M8 6V4h8v2"></path>
+            <path d="M19 6l-1 16H6L5 6"></path>
+            <path d="M10 11v6M14 11v6"></path>
+          </svg>
+        </button>
+        <button
+          class="ui-button ui-button--ghost section-editor__icon-button"
+          type="button"
+          [attr.aria-label]="jsonCopied ? 'JSON copiado' : 'Copiar JSON'"
+          [title]="jsonCopied ? 'Copiado' : 'Copiar JSON'"
+          (click)="copySectionJson()"
+        >
+          <svg *ngIf="!jsonCopied" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <svg *ngIf="jsonCopied" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5"></path>
+          </svg>
+        </button>
+        <button class="ui-button ui-button--ghost" type="button" (click)="formatSection.emit()">Formatear</button>
+        <button class="ui-button ui-button--ghost" type="button" (click)="duplicateSection.emit()" [disabled]="duplicatingSection">Duplicar</button>
+        <button class="ui-button ui-button--ghost" type="button" (click)="addBanner.emit()" [disabled]="addingBanner">Añadir banner</button>
+        <button class="ui-button" type="button" (click)="saveSection.emit()" [disabled]="savingSection">Guardar sección</button>
+        <button class="ui-button ui-button--danger" type="button" (click)="deleteSection.emit()" [disabled]="deletingSection">Borrar sección</button>
+      </div>
+    </div>
+
+    <p class="ui-notice ui-notice--error" *ngIf="sectionJsonError">{{ sectionJsonError }}</p>
+    <textarea
+      #sectionJsonTextarea
+      class="section-editor__json"
+      spellcheck="false"
+      [ngModel]="selectedSectionJson"
+      (keydown)="handleJsonTextareaKeydown($event, sectionJsonTextarea)"
+      (ngModelChange)="selectedSectionJsonChange.emit($event)"
+      aria-label="JSON de la sección seleccionada"
+    ></textarea>
+  </section>
+
+</section>

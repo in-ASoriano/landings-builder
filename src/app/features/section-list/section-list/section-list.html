@@ -1,0 +1,101 @@
+<section class="section-list">
+  <div class="section-list__header">
+    <div>
+      <h3 class="section-list__title">Secciones actuales</h3>
+      <span class="section-list__help">Componentes del JSON seleccionado</span>
+    </div>
+    <div class="section-list__header-actions">
+      <div class="section-list__create-menu" (click)="$event.stopPropagation()">
+        <button class="section-list__create" type="button" [attr.aria-expanded]="newSectionMenuOpen" (click)="toggleNewSectionMenu()">
+          Nueva sección
+        </button>
+        <div class="section-list__create-options" *ngIf="newSectionMenuOpen">
+          <button type="button" *ngFor="let option of newSectionOptions" (click)="createNewSection(option)">
+            {{ option }}
+          </button>
+        </div>
+      </div>
+      <span class="section-list__count">{{ filteredSections.length }} / {{ sections.length }}</span>
+      <label class="section-list__new-type">
+        <span>Tipo</span>
+        <select class="ui-select" [(ngModel)]="newSectionComponent">
+          <option *ngFor="let option of newSectionOptions" [ngValue]="option">{{ option }}</option>
+        </select>
+      </label>
+      <button class="section-list__create" type="button" (click)="createSection.emit(newSectionComponent)">
+        Nueva sección
+      </button>
+    </div>
+  </div>
+
+  <div class="section-list__search">
+    <label class="ui-field-label" for="section-filter">Buscar componente de esta landing</label>
+    <input
+      class="ui-input"
+      id="section-filter"
+      name="sectionFilter"
+      type="search"
+      [ngModel]="sectionFilter"
+      (ngModelChange)="updateFilter($event)"
+      placeholder="video-full, BannerGroup, texto, clase..."
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="section-list__items" *ngIf="filteredSections.length">
+    <button
+      type="button"
+      class="section-list__item"
+      *ngFor="let section of filteredSections; trackBy: trackBySection"
+      draggable="true"
+      [class.section-list__item--active]="section.sectionIndex === selectedSectionIndex"
+      [class.section-list__item--dragging]="isDragging(section)"
+      [class.section-list__item--drop-target]="isDropTarget(section)"
+      (click)="clickSection($event, section)"
+      (dragstart)="startDrag($event, section)"
+      (dragover)="dragOver($event, section)"
+      (drop)="dropSection($event, section)"
+      (dragend)="endDrag()"
+    >
+      <span class="section-list__drag-handle" aria-hidden="true"></span>
+      <strong class="section-list__index">{{ section.sectionIndex + 1 }}</strong>
+      <span class="section-list__label">
+        <strong>{{ section.id || section.component }}</strong>
+        <small>{{ section.component }} - {{ section.banners }} banners</small>
+      </span>
+      <span
+        class="section-list__action section-list__action--duplicate"
+        role="button"
+        tabindex="0"
+        aria-label="Duplicar sección"
+        title="Duplicar sección"
+        (click)="requestDuplicateSection($event, section)"
+        (keydown.enter)="requestDuplicateSection($any($event), section)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="8" y="8" width="11" height="11" rx="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </span>
+      <span
+        class="section-list__action section-list__action--delete"
+        role="button"
+        tabindex="0"
+        aria-label="Borrar sección"
+        title="Borrar sección"
+        (click)="requestDeleteSection($event, section)"
+        (keydown.enter)="requestDeleteSection($any($event), section)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16"></path>
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M6 7l1 14h10l1-14"></path>
+          <path d="M9 7V4h6v3"></path>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  <p class="section-list__empty" *ngIf="!filteredSections.length">No hay secciones con ese filtro.</p>
+</section>

@@ -1,0 +1,48 @@
+<section class="landing-create-modal" *ngIf="open">
+  <form class="landing-create-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="landing-create-title" (ngSubmit)="submit()">
+    <div class="landing-create-modal__header">
+      <div>
+        <span class="ui-eyebrow">Nueva landing</span>
+        <h3 class="landing-create-modal__title" id="landing-create-title">Crear JSON</h3>
+      </div>
+      <button class="landing-create-modal__close" type="button" aria-label="Cerrar" (click)="closeModal.emit()" [disabled]="creatingLanding">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="landing-create-modal__grid">
+      <label class="landing-create-modal__field">
+        <span class="ui-field-label">Numero</span>
+        <input
+          class="ui-input"
+          name="createNumber"
+          [ngModel]="createNumber"
+          (ngModelChange)="createNumberChange.emit($event)"
+          inputmode="numeric"
+          maxlength="4"
+          [placeholder]="nextNumber"
+          autocomplete="off"
+        />
+      </label>
+
+      <label class="landing-create-modal__field landing-create-modal__field--wide">
+        <span class="ui-field-label">Nombre</span>
+        <input
+          class="ui-input"
+          name="createSlug"
+          [ngModel]="createSlug"
+          (ngModelChange)="createSlugChange.emit($event)"
+          placeholder="nombre-landing"
+          autocomplete="off"
+        />
+      </label>
+    </div>
+
+    <div class="landing-create-modal__actions">
+      <button class="ui-button ui-button--ghost" type="button" (click)="closeModal.emit()" [disabled]="creatingLanding">Cancelar</button>
+      <button class="ui-button" type="submit" [disabled]="creatingLanding">{{ creatingLanding ? 'Creando...' : 'Crear landing' }}</button>
+    </div>
+  </form>
+</section>

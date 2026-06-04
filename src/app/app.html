@@ -1,0 +1,149 @@
+<main class="workspace" [ngClass]="workspaceThemeClass()">
+  <section class="workspace__main">
+    <header class="workspace__topbar">
+      <div class="workspace__topbar-grid">
+        <app-landing-switcher
+          class="workspace__landing-switcher"
+          [landings]="landings"
+          [selectedFile]="selectedFile"
+          [landingFilter]="landingFilter"
+          [creatingLanding]="creatingLanding"
+          (selectedFileChange)="loadLanding($event)"
+          (landingFilterChange)="landingFilter = $event"
+          (openCreateLanding)="openCreateLandingModal()"
+        ></app-landing-switcher>
+
+        <app-search-panel
+          *ngIf="selectedLanding"
+          class="workspace__component-finder"
+          [compact]="true"
+          [showSearch]="false"
+          emptyMessage="No hay componentes con ID en las landings."
+          [components]="libraryComponents"
+          [previewComponent]="libraryPreviewComponent"
+          [previewJson]="libraryPreviewJson"
+          [appendIds]="appendIds"
+          [selectedFile]="selectedFile"
+          [loading]="loading || libraryLoading"
+          [previewLoading]="libraryPreviewLoading"
+          (previewComponentChange)="previewLibraryComponent($event)"
+          (appendComponent)="append($event)"
+          (appendIdChange)="setAppendId($event.key, $event.value)"
+        ></app-search-panel>
+
+        <app-landing-toolbar
+          class="workspace__toolbar"
+          [selectedFile]="selectedFile"
+          [activeTheme]="activeTheme"
+          [themeOptions]="themeOptions"
+          [loading]="loading"
+          [deletingLanding]="deletingLanding"
+          [importingLanding]="importingLanding"
+          (themeChange)="setTheme($event)"
+          (refreshLandings)="loadLandings()"
+          (downloadLanding)="downloadSelectedLanding()"
+          (importLanding)="importLandingFile($event)"
+          (deleteLanding)="deleteLanding()"
+        ></app-landing-toolbar>
+      </div>
+    </header>
+
+    <app-notices
+      [error]="error"
+      [message]="message"
+      (clearError)="error = ''"
+      (clearMessage)="message = ''"
+    ></app-notices>
+
+    <app-empty-landing *ngIf="selectedLanding && !selectedLanding.sections.length"></app-empty-landing>
+
+    <section class="workspace__workbench" *ngIf="selectedLanding" [ngStyle]="workbenchGridTemplate()">
+      <app-section-list
+        class="workspace__sections"
+        [sections]="selectedLanding.sections"
+        [selectedSectionIndex]="selectedSectionIndex"
+        [sectionFilter]="sectionFilter"
+        (sectionFilterChange)="sectionFilter = $event"
+        (selectSection)="selectSection($event)"
+        (moveSection)="moveSection($event)"
+        (createSection)="createBlankSection($event)"
+        (duplicateSection)="duplicateSectionAt($event)"
+        (deleteSection)="deleteSectionAt($event)"
+      ></app-section-list>
+
+      <button
+        class="workspace__resizer"
+        type="button"
+        aria-label="Ajustar ancho de secciones actuales"
+        title="Arrastra para ajustar. Doble click para restaurar."
+        (mousedown)="startSectionsResize($event)"
+        (dblclick)="resetSectionsWidth()"
+      >
+        <span></span>
+      </button>
+
+      <app-section-editor
+        class="workspace__editor"
+        *ngIf="selectedSectionSummary() as current"
+        [current]="current"
+        [selectedSectionIndex]="selectedSectionIndex"
+        [selectedSectionJson]="selectedSectionJson"
+        [landingSectionIds]="sectionIdsForEditor()"
+        [sectionJsonError]="sectionJsonError"
+        [savingSection]="savingSection"
+        [deletingSection]="deletingSection"
+        [duplicatingSection]="duplicatingSection"
+        [addingBanner]="addingBanner"
+        (selectedSectionJsonChange)="selectedSectionJson = $event"
+        (formatSection)="formatSelectedSection()"
+        (saveSection)="saveSelectedSection()"
+        (duplicateSection)="duplicateSelectedSection()"
+        (addBanner)="addBannerToSelectedSection()"
+        (deleteSection)="deleteSelectedSection()"
+      ></app-section-editor>
+
+      <div class="workspace__preview-toggle">
+        <div>
+          <span class="ui-eyebrow">Preview landing</span>
+          <strong>{{ previewOpen ? 'Preview visible' : 'Preview plegada' }}</strong>
+        </div>
+        <button class="ui-button ui-button--ghost" type="button" (click)="togglePreview()">
+          {{ previewOpen ? 'Ocultar preview' : 'Mostrar preview' }}
+        </button>
+      </div>
+
+      <app-landing-preview
+        class="workspace__preview"
+        *ngIf="previewOpen"
+        [sections]="currentPreviewSections()"
+        [tplCss]="currentTplCss()"
+        [themeCss]="currentThemeCss()"
+        [tplPath]="currentTplPath()"
+      ></app-landing-preview>
+    </section>
+  </section>
+
+  <app-landing-create-modal
+    [open]="createLandingModalOpen"
+    [createNumber]="createNumber"
+    [createSlug]="createSlug"
+    [nextNumber]="suggestNextNumber()"
+    [creatingLanding]="creatingLanding"
+    (createNumberChange)="createNumber = $event"
+    (createSlugChange)="createSlug = $event"
+    (closeModal)="closeCreateLandingModal()"
+    (createLanding)="createLanding($event)"
+  ></app-landing-create-modal>
+
+  <app-delete-modal
+    [modal]="deleteModal"
+    [confirmation]="deleteConfirmation"
+    [confirmText]="deleteConfirmText"
+    [deletingLanding]="deletingLanding"
+    [deletingSection]="deletingSection"
+    [canConfirm]="canConfirmDelete()"
+    (confirmationChange)="deleteConfirmation = $event"
+    (closeModal)="closeDeleteModal()"
+    (confirmDelete)="confirmDelete()"
+  ></app-delete-modal>
+</main>
