@@ -533,7 +533,7 @@ export class LandingPreviewComponent implements OnChanges {
     const content = this.renderBannerContent(banner);
     const wrapperClasses = this.bannerWrapperClasses(banner);
 
-    return `<div${this.idAttr(banner)} class="${this.classAttr(['st-unit-banner', media ? 'has-bg-image' : '', ...this.customClasses(banner)])}" style="${this.styleAttr(banner, 'unit-banner')}">
+    return `<div${this.idAttr(banner)} class="${this.classAttr(['st-unit-banner', ...this.customClasses(banner)])}" style="${this.styleAttr(banner, 'unit-banner')}">
       ${mediaHtml}
       ${content ? `<div class="${wrapperClasses}"><div class="st-unit-banner__content">${content}</div></div>` : ''}
     </div>`;
@@ -915,7 +915,6 @@ export class LandingPreviewComponent implements OnChanges {
       .st-unit-banner { position: relative; display: block; width: 100%; height: var(--unit-banner__height, auto); margin: var(--unit-banner__margin, 0 auto); padding: var(--unit-banner__padding, 0); color: var(--unit-banner__text-color, #111); background-color: var(--unit-banner__bg-color, transparent); overflow: var(--unit-banner__overflow, hidden); aspect-ratio: var(--unit-banner__aspect-ratio); grid-column: var(--unit-banner__grid-column); }
       .st-unit-card__img, .st-unit-banner__img { display: block; width: 100%; max-width: var(--unit-card__max-width--img, var(--unit-banner__max-width--img, 100%)); height: var(--unit-card__height--img, var(--unit-banner__height--img, auto)); aspect-ratio: var(--unit-card__aspect-ratio--img, var(--unit-banner__aspect-ratio)); object-fit: cover; margin: var(--unit-card__margin--img, 0 auto); }
       .st-unit-card__media, .st-unit-banner__media { display: block; width: 100%; height: var(--unit-card__height--media, var(--unit-banner__height--media, auto)); object-fit: cover; }
-      .has-bg-image .st-unit-banner__img, .has-bg-image .st-unit-banner__media { position: var(--unit-banner__position--img, absolute); inset: 0; height: 100%; }
       .st-unit-card__content, .st-unit-text__content { margin: var(--unit-card__margin--content, var(--unit-text__margin--content)); padding: var(--unit-card__padding--content, var(--unit-text__padding--content, 0)); order: var(--unit-card__order--content, var(--unit-text__order--content)); }
       .st-unit-banner__wrapper { position: absolute; inset: 0; display: flex; justify-content: var(--unit-banner-wrapper__justify-content, center); align-items: var(--unit-banner-wrapper__align-items, center); text-align: var(--unit-banner-wrapper__text-align); z-index: 1; }
       .st-unit-banner__wrapper--left { --unit-banner-wrapper__text-align: left; --unit-banner-wrapper__justify-content: flex-start; }
