@@ -249,9 +249,7 @@ function blankTextSection(id) {
       horizontal: {
         sm: 'center'
       }
-    },
-    image_responsive: null,
-    video_responsive: null
+    }
   });
 }
 
@@ -763,6 +761,8 @@ function unitCustomProperties() {
 
   const css = compileCoreUnitsCss();
   const properties = {
+    section: extractCssVariables(css, '--group-section__'),
+    groupBanner: extractCssVariables(css, '--group-banner__'),
     text: extractCssVariables(css, '--unit-text__'),
     card: extractCssVariables(css, '--unit-card__'),
     banner: extractCssVariables(css, '--unit-banner__')

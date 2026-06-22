@@ -11,6 +11,10 @@ type VisualFieldCategory = 'all' | 'text' | 'media' | 'links' | 'layout' | 'adva
 type BannerUnitType = 'text' | 'card' | 'banner';
 type ResponsiveRootKey = 'direction' | 'columns' | 'horizontal' | 'vertical' | 'packing';
 type ResponsiveBreakpoint = 'sm' | 'md' | 'lg';
+type TextRootKey = 'label' | 'title' | 'subtitle' | 'description' | 'cta';
+type MediaRootKey = 'image_responsive' | 'video_responsive' | 'poster_responsive';
+type CustomPropertyScope = 'section' | 'groupBanner' | 'text' | 'card' | 'banner';
+type QuickActionIcon = 'text' | 'image' | 'video' | 'link' | 'color';
 
 interface VisualCategoryOption {
   id: VisualFieldCategory;
@@ -56,6 +60,36 @@ interface ResponsiveBreakpointOption {
   root: ResponsiveRootKey;
   breakpoint: ResponsiveBreakpoint;
   label: string;
+}
+
+interface MissingTextAction {
+  key: TextRootKey;
+  label: string;
+  icon: QuickActionIcon;
+  badge: string;
+}
+
+interface MediaAction {
+  root: MediaRootKey;
+  mode: 'add' | 'remove';
+  label: string;
+  tone: 'ghost' | 'danger';
+  icon: QuickActionIcon;
+}
+
+interface LayoutAction {
+  key: 'backgroundcolor';
+  mode: 'add' | 'remove';
+  label: string;
+  tone: 'ghost' | 'danger';
+  icon: QuickActionIcon;
+}
+
+interface LinkAction {
+  mode: 'add' | 'remove';
+  label: string;
+  tone: 'ghost' | 'danger';
+  icon: QuickActionIcon;
 }
 
 interface VisualGroup {
@@ -112,7 +146,9 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
   public pendingDeleteBannerId = '';
   public newBannerMenuOpen = false;
   public utilityClasses: string[] = [];
-  public unitCustomProperties: Record<'text' | 'card' | 'banner', string[]> = {
+  public unitCustomProperties: Record<CustomPropertyScope, string[]> = {
+    section: [],
+    groupBanner: [],
     text: [],
     card: [],
     banner: []
@@ -197,13 +233,15 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     this.api.getUnitCustomProperties().subscribe({
       next: ({ properties }) => {
         this.unitCustomProperties = {
+          section: properties.section || [],
+          groupBanner: properties.groupBanner || [],
           text: properties.text || [],
           card: properties.card || [],
           banner: properties.banner || []
         };
       },
       error: () => {
-        this.unitCustomProperties = { text: [], card: [], banner: [] };
+        this.unitCustomProperties = { section: [], groupBanner: [], text: [], card: [], banner: [] };
       }
     });
   }
@@ -313,6 +351,146 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
   public selectedBannerGroup(): VisualGroup | undefined {
     const group = this.selectedVisualGroup();
     return group && this.isBannerGroup(group) ? group : undefined;
+  }
+
+  public missingTextActions(group: VisualGroup): MissingTextAction[] {
+    const record = this.recordForGroup(group);
+    if (!Object.keys(record).length) return [];
+
+    return this.textKeysForGroup(group, record)
+      .filter((key) => this.isMissingFieldValue(record[key]))
+      .map((key) => ({
+        key,
+        label: `Añadir ${this.humanize(key)}`,
+        icon: 'text',
+        badge: this.textActionBadge(key)
+      }));
+  }
+
+  public mediaActions(group: VisualGroup): MediaAction[] {
+    const record = this.recordForGroup(group);
+    if (!this.canEditMedia(record)) return [];
+
+    const actions: MediaAction[] = [];
+    for (const root of ['image_responsive', 'video_responsive'] as MediaRootKey[]) {
+      const hasRoot = !this.isMissingFieldValue(record[root]);
+      actions.push({
+        root,
+        mode: hasRoot ? 'remove' : 'add',
+        label: hasRoot ? `Quitar ${this.mediaRootLabel(root)}` : `Añadir ${this.mediaRootLabel(root)}`,
+        tone: hasRoot ? 'danger' : 'ghost',
+        icon: root === 'video_responsive' ? 'video' : 'image'
+      });
+    }
+
+    return actions;
+  }
+
+  public layoutActions(group: VisualGroup): LayoutAction[] {
+    const record = this.recordForGroup(group);
+    if (group.path.length || !Object.keys(record).length) return [];
+    const hasBackground = !this.isMissingFieldValue(record['backgroundcolor']);
+
+    return [{
+      key: 'backgroundcolor',
+      mode: hasBackground ? 'remove' : 'add',
+      label: hasBackground ? 'Quitar Background color' : 'Añadir Background color',
+      tone: hasBackground ? 'danger' : 'ghost',
+      icon: 'color'
+    }];
+  }
+
+  public linkActions(group: VisualGroup): LinkAction[] {
+    const record = this.recordForGroup(group);
+    if (!this.canHaveEcomLink(record)) return [];
+
+    const hasLink = !this.isMissingFieldValue(record['ecom_link']);
+    return [{
+      mode: hasLink ? 'remove' : 'add',
+      label: hasLink ? 'Quitar link' : 'Añadir link',
+      tone: hasLink ? 'danger' : 'ghost',
+      icon: 'link'
+    }];
+  }
+
+  public quickActionMode(action: MissingTextAction | MediaAction | LayoutAction | LinkAction): 'add' | 'remove' {
+    return 'mode' in action ? action.mode : 'add';
+  }
+
+  private textActionBadge(key: TextRootKey): string {
+    return {
+      label: 'LBL',
+      title: 'H1',
+      subtitle: 'H2',
+      description: 'P',
+      cta: 'CTA'
+    }[key];
+  }
+
+  public hasQuickActions(group: VisualGroup): boolean {
+    return Boolean(
+      this.missingTextActions(group).length
+      || this.mediaActions(group).length
+      || this.linkActions(group).length
+      || this.layoutActions(group).length
+    );
+  }
+
+  public addMissingTextField(group: VisualGroup, key: TextRootKey): void {
+    const section = this.parseSectionJson();
+    if (!section) return;
+
+    const record = this.asRecord(this.nodeAtPath(section, group.path));
+    if (!Object.keys(record).length || !this.isMissingFieldValue(record[key])) return;
+
+    record[key] = this.emptyTextValue(key);
+    this.visualFormError = '';
+    this.commitSectionJson(section);
+  }
+
+  public applyMediaAction(group: VisualGroup, action: MediaAction): void {
+    const section = this.parseSectionJson();
+    if (!section) return;
+
+    const record = this.asRecord(this.nodeAtPath(section, group.path));
+    if (!Object.keys(record).length) return;
+
+    if (action.mode === 'remove') {
+      record[action.root] = null;
+    } else {
+      record[action.root] = this.emptyMediaValue(action.root);
+    }
+
+    this.visualFormError = '';
+    this.commitSectionJson(section);
+  }
+
+  public applyLayoutAction(group: VisualGroup, action: LayoutAction): void {
+    const section = this.parseSectionJson();
+    if (!section) return;
+
+    const record = this.asRecord(this.nodeAtPath(section, group.path));
+    if (!Object.keys(record).length || action.key !== 'backgroundcolor') return;
+
+    if (action.mode === 'remove') {
+      record[action.key] = null;
+    } else {
+      record[action.key] = '#EBEAE5';
+    }
+    this.visualFormError = '';
+    this.commitSectionJson(section);
+  }
+
+  public applyLinkAction(group: VisualGroup, action: LinkAction): void {
+    const section = this.parseSectionJson();
+    if (!section) return;
+
+    const record = this.asRecord(this.nodeAtPath(section, group.path));
+    if (!Object.keys(record).length || !this.canHaveEcomLink(record)) return;
+
+    record['ecom_link'] = action.mode === 'remove' ? null : this.emptyEcomLink();
+    this.visualFormError = '';
+    this.commitSectionJson(section);
   }
 
   public canMoveSelectedBanner(direction: -1 | 1): boolean {
@@ -547,6 +725,12 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     return field.kind === 'number' && field.path.some((part) => String(part) === 'columns');
   }
 
+  public isVideoFlagField(field: VisualField): boolean {
+    const parts = field.path.map((part) => String(part));
+    const key = parts[parts.length - 1];
+    return parts.includes('video_responsive') && ['hasAudio', 'controls'].includes(key);
+  }
+
   public isResponsiveField(field: VisualField): boolean {
     return Boolean(this.responsiveFieldRoot(field));
   }
@@ -561,6 +745,7 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
   }
 
   public isWideField(field: VisualField): boolean {
+    if (this.isVideoFlagField(field)) return false;
     return field.multiline || field.kind === 'json' || field.kind === 'localized' || field.kind === 'list' || field.category === 'media';
   }
 
@@ -647,6 +832,8 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
   private mediaFieldLabel(path: JsonPathSegment[], root: string): string {
     const prefix = root === 'image_responsive' ? 'Image' : root === 'video_responsive' ? 'Video' : 'Poster';
     const key = this.lastMeaningfulPathKey(path);
+    if (root === 'video_responsive' && key === 'hasAudio') return 'Has audio';
+    if (root === 'video_responsive' && key === 'controls') return 'Controls';
     const size = key.split('_').pop() || '';
 
     return `${prefix} ${size.toUpperCase()}`;
@@ -750,11 +937,12 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     const parentPath = field.path.slice(0, -1);
     const parent = this.asRecord(this.nodeAtPath(section, parentPath));
     const breakpoint = String(field.path[field.path.length - 1] || '');
-    delete parent[breakpoint];
-    if (this.isAlignmentRoot(this.responsiveFieldRoot(field)) && !Object.keys(parent).length) {
+    parent[breakpoint] = null;
+    if (this.isAlignmentRoot(this.responsiveFieldRoot(field)) && !this.hasMeaningfulValue(parent)) {
       const grandParent = this.asRecord(this.nodeAtPath(section, parentPath.slice(0, -1)));
-      delete grandParent[String(parentPath[parentPath.length - 1])];
+      grandParent[String(parentPath[parentPath.length - 1])] = null;
     }
+    this.normalizeNullableRootAtPath(section, field.path);
     this.visualFormError = '';
     this.commitSectionJson(section);
   }
@@ -986,11 +1174,11 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
   public customPropertySuggestions(field: VisualField, value: string): string[] {
     const query = value.trim().toLowerCase();
     const scope = this.customPropertyScope(field);
-    if (!scope || !query.startsWith('--')) return [];
+    if (!scope || !query) return [];
 
     const currentKeys = new Set(this.propertyItems(field).map((item) => item.key));
-    return this.unitCustomProperties[scope]
-      .filter((property) => property.toLowerCase().includes(query))
+    return this.customPropertyOptions(scope)
+      .filter((property) => this.customPropertyMatchesQuery(property, query))
       .filter((property) => !currentKeys.has(property))
       .slice(0, 8);
   }
@@ -1008,8 +1196,8 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
 
   public customPropertyHelpText(field: VisualField): string {
     const value = this.propertyKeyInputValue(field);
-    if (!value.trim().startsWith('--')) return '';
-    if (!this.customPropertyScope(field)) return 'Este nodo no tiene variables de unidad.';
+    if (!value.trim()) return '';
+    if (!this.customPropertyScope(field)) return 'Este nodo no tiene variables CSS sugeridas.';
     return this.customPropertySuggestions(field, value).length
       ? 'Tab para completar la primera sugerencia.'
       : 'Sin coincidencias para este tipo.';
@@ -1019,11 +1207,15 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     const scope = this.customPropertyScope(field);
     if (!scope) return '--custom-property';
 
-    const preferred = this.unitCustomProperties[scope].find((property) => property.includes('__height'))
-      || this.unitCustomProperties[scope][0];
+    const properties = this.customPropertyOptions(scope);
+    const preferred = properties.find((property) => property.includes('__height'))
+      || properties.find((property) => property.includes('__padding'))
+      || properties[0];
     if (preferred) return preferred;
 
     return {
+      section: '--group-section__padding',
+      groupBanner: '--group-banner__padding',
       text: '--unit-text__font-size--title',
       card: '--unit-card__font-weight--title',
       banner: '--unit-banner__height'
@@ -1047,7 +1239,7 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  private customPropertyScope(field: VisualField): 'text' | 'card' | 'banner' | '' {
+  private customPropertyScope(field: VisualField): CustomPropertyScope | '' {
     if (!field.path.slice(-2).every((part, index) => String(part) === ['config_extra', 'custom_properties'][index])) {
       return '';
     }
@@ -1055,9 +1247,85 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     const section = this.parseSectionJson();
     if (!section) return '';
 
-    const node = this.asRecord(this.nodeAtPath(section, field.path.slice(0, -2)));
+    const nodePath = field.path.slice(0, -2);
+    const node = this.asRecord(this.nodeAtPath(section, nodePath));
     const type = node['type'];
-    return type === 'text' || type === 'card' || type === 'banner' ? type : '';
+    if (type === 'text' || type === 'card' || type === 'banner') return type;
+    if (nodePath.length === 0) return 'section';
+    if (node['component']) return 'groupBanner';
+    return '';
+  }
+
+  private customPropertyOptions(scope: CustomPropertyScope): string[] {
+    const fromApi = this.unitCustomProperties[scope] || [];
+    const fallbacks: Record<CustomPropertyScope, string[]> = {
+      section: [
+        '--group-section__padding',
+        '--group-section__padding-sm',
+        '--group-section__padding-md',
+        '--group-section__margin',
+        '--group-section__margin-sm',
+        '--group-section__margin-md',
+        '--group-section__max-width',
+        '--group-section__bg-color',
+        '--group-section__row-gap',
+        '--group-section__column-gap',
+        '--group-section__template-columns',
+        '--group-section__text-align'
+      ],
+      groupBanner: [
+        '--group-banner__padding',
+        '--group-banner__padding-sm',
+        '--group-banner__padding-md',
+        '--group-banner__margin',
+        '--group-banner__margin-sm',
+        '--group-banner__margin-md',
+        '--group-banner__max-width',
+        '--group-banner__bg-color',
+        '--group-banner__row-gap',
+        '--group-banner__column-gap',
+        '--group-banner__template-columns',
+        '--group-banner__grid-column'
+      ],
+      text: [
+        '--unit-text__font-size--title',
+        '--unit-text__font-weight--title',
+        '--unit-text__text-color',
+        '--unit-text__padding',
+        '--unit-text__margin'
+      ],
+      card: [
+        '--unit-card__font-weight--title',
+        '--unit-card__padding',
+        '--unit-card__margin',
+        '--unit-card__height--img',
+        '--unit-card__text-color'
+      ],
+      banner: [
+        '--unit-banner__height',
+        '--unit-banner__aspect-ratio',
+        '--unit-banner__padding',
+        '--unit-banner__margin',
+        '--unit-banner__text-color'
+      ]
+    };
+
+    return [...new Set([...fromApi, ...fallbacks[scope]])].sort((left, right) => left.localeCompare(right));
+  }
+
+  private customPropertyMatchesQuery(property: string, query: string): boolean {
+    const normalizedQuery = query.replace(/^--/, '').trim();
+    const tokens = normalizedQuery.split(/[\s._:-]+/).filter(Boolean);
+    if (!tokens.length) return true;
+
+    const propertyName = property.toLowerCase();
+    const searchableName = propertyName
+      .replace(/^--/, '')
+      .replace(/__/g, ' ')
+      .replace(/--/g, ' ')
+      .replace(/[-_]/g, ' ');
+
+    return tokens.every((token) => propertyName.includes(token) || searchableName.includes(token));
   }
 
   private propertyNameIncludes(property: string, tokens: string[]): boolean {
@@ -1199,8 +1467,9 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
       const nextValue = this.fieldValueFromInput(field, value);
       this.ensureEcomLinkRoot(section, field.path);
       this.setPathValue(section, field.path, nextValue);
+      this.normalizeNullableRootAtPath(section, field.path);
       this.visualFormError = '';
-      this.selectedSectionJsonChange.emit(JSON.stringify(section, null, 2));
+      this.commitSectionJson(section);
     } catch (error) {
       this.visualFormError = error instanceof Error ? error.message : 'Valor inválido';
     }
@@ -1214,6 +1483,7 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
 
     try {
       const shouldRemoveLocale = this.canManageLocales(field) && locale.key !== 'default' && value.trim() === '';
+      this.ensureEcomLinkRoot(section, locale.path);
       if (shouldRemoveLocale) {
         this.deletePathValue(section, locale.path);
       } else {
@@ -1226,8 +1496,9 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
         defaultEntry.value = '';
         field.value = '';
       }
+      this.normalizeNullableRootAtPath(section, locale.path);
       this.visualFormError = '';
-      this.selectedSectionJsonChange.emit(JSON.stringify(section, null, 2));
+      this.commitSectionJson(section);
       field.value = locale.key === 'default' ? value : field.value;
       locale.value = value;
     } catch (error) {
@@ -1269,7 +1540,7 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
   }
 
   public canManageLocales(field: VisualField): boolean {
-    return this.isEcomLinkLocalizablePath(field.path);
+    return this.isEcomLinkLocalizablePath(field.path) || this.isTextLocaleField(field);
   }
 
   public availableLocaleKeys(field: VisualField): string[] {
@@ -1284,11 +1555,15 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     if (!section) return;
 
     const defaultValue = this.defaultLocale(field)?.value || '';
+    this.ensureEcomLinkRoot(section, [...field.path, localeKey]);
     this.setPathValue(section, [...field.path, localeKey], defaultValue);
+    if (this.isTextLocaleField(field)) {
+      this.setPathValue(section, [...field.path, 'default'], null);
+    }
     this.activeLanguageTabs[field.id] = localeKey;
     this.expandedLanguageFields[field.id] = true;
     this.visualFormError = '';
-    this.selectedSectionJsonChange.emit(JSON.stringify(section, null, 2));
+    this.commitSectionJson(section);
   }
 
   public removeLocaleFromField(field: VisualField, locale: VisualLocaleField): void {
@@ -1298,10 +1573,11 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     if (!section) return;
 
     this.deletePathValue(section, locale.path);
+    this.normalizeNullableRootAtPath(section, locale.path);
     const nextLocale = this.nonDefaultLocales(field).find((item) => item.key !== locale.key);
     this.activeLanguageTabs[field.id] = nextLocale?.key || '';
     this.visualFormError = '';
-    this.selectedSectionJsonChange.emit(JSON.stringify(section, null, 2));
+    this.commitSectionJson(section);
   }
 
   public localeSummary(field: VisualField): string {
@@ -1330,6 +1606,7 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     const section = this.parseSectionJson();
     if (!section) return;
 
+    this.ensureEcomLinkRoot(section, source.path);
     for (const locale of this.nonDefaultLocales(field)) {
       if (locale.key !== source.key && !this.hasLocaleValue(locale)) {
         this.setPathValue(section, locale.path, source.value);
@@ -1341,22 +1618,53 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
       this.setPathValue(section, defaultEntry.path, null);
     }
 
+    this.normalizeNullableRootAtPath(section, source.path);
     this.visualFormError = '';
-    this.selectedSectionJsonChange.emit(JSON.stringify(section, null, 2));
+    this.commitSectionJson(section);
   }
 
   public clearLanguageLocale(field: VisualField, locale: VisualLocaleField): void {
     const section = this.parseSectionJson();
     if (!section) return;
 
+    this.ensureEcomLinkRoot(section, locale.path);
     if (this.canManageLocales(field) && locale.key !== 'default') {
       this.deletePathValue(section, locale.path);
     } else {
       this.setPathValue(section, locale.path, '');
     }
 
+    this.normalizeNullableRootAtPath(section, locale.path);
     this.visualFormError = '';
-    this.selectedSectionJsonChange.emit(JSON.stringify(section, null, 2));
+    this.commitSectionJson(section);
+  }
+
+  public canRemoveTextField(field: VisualField): boolean {
+    const root = this.editableRootKeyFromPath(field.path);
+    return field.category === 'text' && this.isTextRoot(root);
+  }
+
+  public removeTextField(field: VisualField): void {
+    if (!this.canRemoveTextField(field)) return;
+
+    const section = this.parseSectionJson();
+    if (!section) return;
+
+    const rootPath = this.nullableRootPath(field.path);
+    if (rootPath) {
+      this.setPathValue(section, rootPath, null);
+    } else {
+      this.deletePathValue(section, field.path);
+    }
+
+    if (field.htmlTagField && !rootPath) {
+      this.deletePathValue(section, field.htmlTagField.path);
+    }
+
+    delete this.activeLanguageTabs[field.id];
+    delete this.expandedLanguageFields[field.id];
+    this.visualFormError = '';
+    this.commitSectionJson(section);
   }
 
   public hasLocaleValue(locale: VisualLocaleField): boolean {
@@ -1364,6 +1672,7 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
   }
 
   public isDefaultLocaleLocked(field: VisualField, locale: VisualLocaleField): boolean {
+    if (this.isTextLocaleField(field) && locale.key === 'default' && this.nonDefaultLocales(field).length > 0) return true;
     if (this.canManageLocales(field)) return false;
     return locale.key === 'default' && this.nonDefaultLocales(field).length > 0;
   }
@@ -1841,6 +2150,89 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     return JSON.parse(JSON.stringify(value)) as T;
   }
 
+  private recordForGroup(group: VisualGroup): Record<string, unknown> {
+    const section = this.parseSectionJson();
+    return section ? this.asRecord(this.nodeAtPath(section, group.path)) : {};
+  }
+
+  private textKeysForGroup(group: VisualGroup, record: Record<string, unknown>): TextRootKey[] {
+    if (!group.path.length) return ['title', 'subtitle'];
+
+    const type = this.valueLabel(record['type']).toLowerCase();
+    if (type === 'text') return ['label', 'title', 'subtitle', 'description', 'cta'];
+    if (type === 'card' || type === 'banner') return ['label', 'title', 'subtitle', 'description', 'cta'];
+
+    return ['title', 'subtitle', 'description'];
+  }
+
+  private canEditMedia(record: Record<string, unknown>): boolean {
+    const type = this.valueLabel(record['type']).toLowerCase();
+    const hasMediaValue = !this.isMissingFieldValue(record['image_responsive'])
+      || !this.isMissingFieldValue(record['video_responsive'])
+      || !this.isMissingFieldValue(record['poster_responsive']);
+    if (type === 'text') return hasMediaValue;
+
+    return type === 'card'
+      || type === 'banner'
+      || hasMediaValue;
+  }
+
+  private isMissingFieldValue(value: unknown): boolean {
+    return value === undefined || value === null;
+  }
+
+  private emptyTextValue(key: TextRootKey): Record<string, unknown> {
+    const value: Record<string, unknown> = {
+      default: ''
+    };
+
+    if (['title', 'subtitle', 'description'].includes(key)) {
+      value['config_extra'] = {
+        html_tag: this.defaultHtmlTag(key)
+      };
+    }
+
+    return value;
+  }
+
+  private emptyMediaValue(root: MediaRootKey): Record<string, unknown> {
+    if (root === 'video_responsive') {
+      return {
+        default: {
+          video_sm: '',
+          video_md: '',
+          video_lg: '',
+          hasAudio: false,
+          controls: false
+        }
+      };
+    }
+
+    if (root === 'poster_responsive') {
+      return {
+        default: {
+          poster_sm: '',
+          poster_md: '',
+          poster_lg: ''
+        }
+      };
+    }
+
+    return {
+      default: {
+        image_sm: '',
+        image_md: '',
+        image_lg: ''
+      }
+    };
+  }
+
+  private mediaRootLabel(root: MediaRootKey): string {
+    if (root === 'video_responsive') return 'video';
+    if (root === 'poster_responsive') return 'poster';
+    return 'imagen';
+  }
+
   private collectGroups(value: unknown, path: JsonPathSegment[], label: string, groups: VisualGroup[]): void {
     const record = this.asRecord(value);
     if (!Object.keys(record).length) return;
@@ -1850,9 +2242,9 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
 
     for (const key of this.editableRootKeys()) {
       if (key === 'ecom_link') {
-        if (key in record || this.canHaveEcomLink(record)) {
+        if (record[key] !== null && record[key] !== undefined) {
           this.collectEditableFields(
-            record[key] ?? this.emptyEcomLink(),
+            record[key],
             [...path, key],
             this.humanize(key),
             fields,
@@ -2267,6 +2659,112 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
     delete (cursor as Record<string, unknown>)[String(key)];
   }
 
+  private editableRootKeyFromPath(path: JsonPathSegment[]): string {
+    return String(path.find((part) => typeof part === 'string' && this.editableRootKeys().includes(part)) || '');
+  }
+
+  private nullableRootPath(path: JsonPathSegment[]): JsonPathSegment[] | undefined {
+    const nullableRoots = this.editableRootKeys();
+    const rootIndex = path.findIndex((part) => typeof part === 'string' && nullableRoots.includes(part));
+    return rootIndex >= 0 ? path.slice(0, rootIndex + 1) : undefined;
+  }
+
+  private normalizeNullableRootAtPath(target: unknown, path: JsonPathSegment[]): void {
+    const rootPath = this.nullableRootPath(path);
+    if (!rootPath) return;
+
+    const rootKey = String(rootPath[rootPath.length - 1]);
+    const value = this.nodeAtPath(target, rootPath);
+    if (this.isNullableRootEmpty(rootKey, value)) {
+      this.setPathValue(target, rootPath, null);
+    }
+  }
+
+  private isNullableRootEmpty(rootKey: string, value: unknown): boolean {
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'string') return value.trim() === '';
+
+    if (this.isTextRoot(rootKey)) {
+      return !this.hasLocalizedContent(value);
+    }
+
+    if (['image_responsive', 'video_responsive', 'poster_responsive'].includes(rootKey)) {
+      return !this.hasMeaningfulMediaSource(rootKey, value);
+    }
+
+    if (rootKey === 'ecom_link') {
+      return !this.hasMeaningfulEcomLink(value);
+    }
+
+    return !this.hasMeaningfulValue(value);
+  }
+
+  private hasLocalizedContent(value: unknown): boolean {
+    const record = this.asRecord(value);
+    return Object.entries(record).some(([key, item]) => {
+      if (key !== 'default' && !this.isLocaleKey(key)) return false;
+      return typeof item === 'string' ? item.trim().length > 0 : item !== null && item !== undefined;
+    });
+  }
+
+  private hasMeaningfulEcomLink(value: unknown): boolean {
+    const record = this.asRecord(value);
+    return this.hasMeaningfulValue(record['type'])
+      || this.hasMeaningfulValue(record['identifier'])
+      || this.hasMeaningfulValue(record['anchor'])
+      || this.hasMeaningfulValue(record['custom_class'])
+      || this.hasMeaningfulUrl(record['url'])
+      || record['obfuscated'] === true
+      || this.hasMeaningfulValue(record['config_extra']);
+  }
+
+  private hasMeaningfulUrl(value: unknown): boolean {
+    if (typeof value !== 'string') return this.hasMeaningfulValue(value);
+    const trimmed = value.trim();
+    return trimmed.length > 0 && trimmed !== 'null';
+  }
+
+  private hasMeaningfulMediaSource(rootKey: string, value: unknown): boolean {
+    if (typeof value === 'string') return this.hasMeaningfulUrl(value);
+
+    const prefix = rootKey === 'image_responsive'
+      ? 'image'
+      : rootKey === 'video_responsive'
+        ? 'video'
+        : 'poster';
+
+    return this.hasMediaSourceValue(value, prefix);
+  }
+
+  private hasMediaSourceValue(value: unknown, prefix: string): boolean {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return this.hasMeaningfulUrl(value);
+    if (Array.isArray(value)) return value.some((item) => this.hasMediaSourceValue(item, prefix));
+    if (typeof value !== 'object') return false;
+
+    return Object.entries(value as Record<string, unknown>).some(([key, item]) => {
+      if (new RegExp(`^${prefix}_(sm|md|lg|xl)$`).test(key)) {
+        return this.hasMeaningfulUrl(item);
+      }
+
+      return this.hasMediaSourceValue(item, prefix);
+    });
+  }
+
+  private hasMeaningfulValue(value: unknown): boolean {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return value.trim().length > 0 && value.trim() !== 'null';
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'boolean') return true;
+    if (Array.isArray(value)) return value.some((item) => this.hasMeaningfulValue(item));
+
+    const record = this.asRecord(value);
+    return Object.entries(record).some(([key, item]) => {
+      if (key === 'html_tag') return false;
+      return this.hasMeaningfulValue(item);
+    });
+  }
+
   private async copyText(value: string): Promise<void> {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(value);
@@ -2386,6 +2884,14 @@ export class SectionEditorComponent implements OnInit, OnDestroy {
 
   private isTextRoot(value: string): boolean {
     return ['title', 'subtitle', 'description', 'label', 'cta'].includes(value);
+  }
+
+  private rootKeyFromPath(path: JsonPathSegment[]): string {
+    return String(path.find((part) => typeof part === 'string' && this.isTextRoot(part)) || '');
+  }
+
+  private isTextLocaleField(field: VisualField): boolean {
+    return field.kind === 'localized' && this.isTextRoot(this.rootKeyFromPath(field.path));
   }
 
   private isLocalizableField(rootKey: string, path: JsonPathSegment[]): boolean {

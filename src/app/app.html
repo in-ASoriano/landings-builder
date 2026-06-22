@@ -94,7 +94,7 @@
         [deletingSection]="deletingSection"
         [duplicatingSection]="duplicatingSection"
         [addingBanner]="addingBanner"
-        (selectedSectionJsonChange)="selectedSectionJson = $event"
+        (selectedSectionJsonChange)="updateSelectedSectionDraft($event)"
         (formatSection)="formatSelectedSection()"
         (saveSection)="saveSelectedSection()"
         (duplicateSection)="duplicateSelectedSection()"

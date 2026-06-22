@@ -38,6 +38,12 @@ testem.log
 /typings
 __screenshots__/
 
+# Local run artifacts
+*.log
+*.err
+chrome-check*.png
+chrome-debug-profile/
+
 # System files
 .DS_Store
 Thumbs.db

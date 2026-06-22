@@ -51,7 +51,7 @@ export class LandingApiService {
   }
 
   public getUnitCustomProperties() {
-    return this.http.get<{ properties: Record<'text' | 'card' | 'banner', string[]> }>('/api/unit-custom-properties');
+    return this.http.get<{ properties: Record<'section' | 'groupBanner' | 'text' | 'card' | 'banner', string[]> }>('/api/unit-custom-properties');
   }
 
   public appendSection(file: string, payload: { sourceFile: string; sectionIndex: number; id: string }) {

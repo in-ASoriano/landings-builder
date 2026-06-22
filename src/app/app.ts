@@ -20,9 +20,12 @@ import {
   CreateLandingRequest,
   DeleteModal,
   LandingDetail,
+  LandingRaw,
   LandingSummary,
+  MediaRef,
   SectionMove,
   SectionSummary,
+  SectionUnitSummary,
   TplStatus
 } from './models';
 
@@ -105,10 +108,13 @@ export class App implements OnInit, OnDestroy {
   private readonly externalWatchIntervalMs = 2500;
   private externalWatchId?: ReturnType<typeof setInterval>;
   private selectedLandingModifiedAt = '';
+  private savedLandingRaw?: LandingRaw;
   private selectedTplModifiedAt = '';
   private selectedThemeCssModifiedAt = '';
   private landingsSignature = '';
   private autoRefreshPauseNotified = false;
+  private selectedSectionUndoStack: string[] = [];
+  private readonly selectedSectionUndoLimit = 80;
 
   ngOnInit(): void {
     this.loadConfig();
@@ -122,7 +128,16 @@ export class App implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   public handleDocumentShortcuts(event: KeyboardEvent): void {
-    const isSaveShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's';
+    const key = event.key.toLowerCase();
+    const isUndoShortcut = (event.ctrlKey || event.metaKey) && !event.shiftKey && key === 'z';
+    if (isUndoShortcut) {
+      if (!this.canUndoSelectedSectionDraft()) return;
+      event.preventDefault();
+      this.undoSelectedSectionDraft();
+      return;
+    }
+
+    const isSaveShortcut = (event.ctrlKey || event.metaKey) && key === 's';
     if (!isSaveShortcut) return;
 
     event.preventDefault();
@@ -223,11 +238,13 @@ export class App implements OnInit, OnDestroy {
     if (clearMessage) this.message = '';
     this.tplStatus = undefined;
     this.selectedLanding = undefined;
+    this.savedLandingRaw = undefined;
     this.selectedSectionJson = '';
     this.api.getLanding(file).subscribe({
       next: (landing) => {
         if (landing.file !== this.selectedFile) return;
         this.selectedLanding = landing;
+        this.savedLandingRaw = this.clone(landing.raw);
         this.selectedLandingModifiedAt = landing.modifiedAt || this.modifiedAtForLanding(landing.file);
         if (this.selectedSectionIndex >= landing.sections.length) {
           this.selectedSectionIndex = Math.max(landing.sections.length - 1, 0);
@@ -757,9 +774,60 @@ export class App implements OnInit, OnDestroy {
 
   public formatSelectedSection(): void {
     const formatted = this.sectionJson.format(this.selectedSectionJson);
-    this.selectedSectionJson = formatted.json;
+    this.updateSelectedSectionDraft(formatted.json);
     this.sectionJsonError = formatted.error;
     this.refresh();
+  }
+
+  public updateSelectedSectionDraft(value: string): void {
+    if (value !== this.selectedSectionJson) {
+      this.pushSelectedSectionUndo(this.selectedSectionJson);
+    }
+
+    this.applySelectedSectionDraft(value);
+  }
+
+  private applySelectedSectionDraft(value: string): void {
+    this.selectedSectionJson = value;
+    if (!this.selectedLanding) {
+      this.refresh();
+      return;
+    }
+
+    try {
+      const section = JSON.parse(value) as unknown;
+      if (!section || typeof section !== 'object' || Array.isArray(section)) {
+        throw new Error('La sección debe ser un objeto JSON');
+      }
+
+      this.patchSelectedSectionDraft(section);
+      this.sectionJsonError = '';
+    } catch {
+      // Mientras el usuario escribe JSON incompleto, mantenemos el último draft válido.
+    }
+
+    this.refresh();
+  }
+
+  private canUndoSelectedSectionDraft(): boolean {
+    return Boolean(this.selectedLanding && this.selectedSectionUndoStack.length);
+  }
+
+  private undoSelectedSectionDraft(): void {
+    const previous = this.selectedSectionUndoStack.pop();
+    if (previous === undefined) return;
+
+    this.applySelectedSectionDraft(previous);
+    this.sectionJsonError = '';
+  }
+
+  private pushSelectedSectionUndo(value: string): void {
+    if (!value || this.selectedSectionUndoStack[this.selectedSectionUndoStack.length - 1] === value) return;
+
+    this.selectedSectionUndoStack.push(value);
+    if (this.selectedSectionUndoStack.length > this.selectedSectionUndoLimit) {
+      this.selectedSectionUndoStack.shift();
+    }
   }
 
   public deleteSelectedSection(): void {
@@ -1013,6 +1081,7 @@ export class App implements OnInit, OnDestroy {
         sections: rawSections
       }
     };
+    this.savedLandingRaw = this.clone(this.selectedLanding.raw);
     this.selectedLandingModifiedAt = nextModifiedAt;
 
     this.landings = this.landings.map((landing) => (
@@ -1035,6 +1104,144 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
+  private patchSelectedSectionDraft(section: unknown): void {
+    if (!this.selectedLanding) return;
+
+    const rawSections = [...(this.selectedLanding.raw?.sections || [])];
+    rawSections[this.selectedSectionIndex] = section;
+    const sections = [...this.selectedLanding.sections];
+    sections[this.selectedSectionIndex] = this.sectionSummary(section, this.selectedSectionIndex);
+
+    this.selectedLanding = {
+      ...this.selectedLanding,
+      sections,
+      raw: {
+        ...this.selectedLanding.raw,
+        sections: rawSections
+      }
+    };
+  }
+
+  private sectionSummary(section: unknown, index: number): SectionSummary {
+    const record = this.asRecord(section);
+    const media = this.collectMedia(section);
+    return {
+      file: this.selectedFile,
+      sectionIndex: index,
+      component: String(record['component'] || record['type'] || 'section'),
+      id: this.sectionId(record),
+      title: this.sectionTitle(record),
+      classes: this.collectCustomClasses(section).sort(),
+      media: media.slice(0, 4),
+      previewImage: media.find((item) => item.key.startsWith('image_lg'))?.url
+        || media.find((item) => item.key.startsWith('image_md'))?.url
+        || media.find((item) => item.key.startsWith('image_sm'))?.url
+        || '',
+      banners: Array.isArray(record['banners']) ? record['banners'].length : 0,
+      units: this.sectionUnits(record)
+    };
+  }
+
+  private sectionId(section: Record<string, unknown>): string {
+    return String(this.asRecord(this.asRecord(section['config_extra'])['custom_properties'])['id'] || '');
+  }
+
+  private sectionTitle(section: Record<string, unknown>): string {
+    const banners = Array.isArray(section['banners']) ? section['banners'] : [];
+    for (const banner of banners) {
+      const record = this.asRecord(banner);
+      const text = this.extractFirstText(record['title'])
+        || this.extractFirstText(record['subtitle'])
+        || this.extractFirstText(record['description'])
+        || this.extractFirstText(record['label']);
+      if (text) return text;
+    }
+
+    return this.extractFirstText(section['title'])
+      || this.extractFirstText(section['subtitle'])
+      || this.extractFirstText(section['description'])
+      || '';
+  }
+
+  private sectionUnits(section: Record<string, unknown>): SectionUnitSummary[] {
+    const units = Array.isArray(section['banners']) && section['banners'].length ? section['banners'] : [section];
+    return units.map((unit) => ({
+      type: String(this.asRecord(unit)['type'] || ''),
+      hasImage: this.hasMedia(unit, 'image') || this.hasMedia(unit, 'poster'),
+      hasVideo: this.hasMedia(unit, 'video'),
+      hasText: Boolean(this.unitText(unit))
+    }));
+  }
+
+  private unitText(unit: unknown): string {
+    const record = this.asRecord(unit);
+    return this.extractFirstText(record['title'])
+      || this.extractFirstText(record['subtitle'])
+      || this.extractFirstText(record['description'])
+      || this.extractFirstText(record['label'])
+      || this.extractFirstText(record['cta']);
+  }
+
+  private hasMedia(value: unknown, prefix: string): boolean {
+    return this.collectMedia(value).some((item) => item.key.startsWith(prefix));
+  }
+
+  private collectMedia(value: unknown, output: MediaRef[] = []): MediaRef[] {
+    if (Array.isArray(value)) {
+      value.forEach((item) => this.collectMedia(item, output));
+      return output;
+    }
+
+    if (!value || typeof value !== 'object') return output;
+    Object.entries(value as Record<string, unknown>).forEach(([key, item]) => {
+      if (/^(image|poster|video)_(sm|md|lg)$/.test(key) && typeof item === 'string') {
+        output.push({ key, url: item });
+      } else {
+        this.collectMedia(item, output);
+      }
+    });
+    return output;
+  }
+
+  private collectCustomClasses(value: unknown, output = new Set<string>()): string[] {
+    if (Array.isArray(value)) {
+      value.forEach((item) => this.collectCustomClasses(item, output));
+    } else if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      if (Array.isArray(record['custom_classes'])) {
+        record['custom_classes'].filter((item): item is string => typeof item === 'string' && Boolean(item)).forEach((item) => output.add(item));
+      }
+      Object.values(record).forEach((item) => this.collectCustomClasses(item, output));
+    }
+    return [...output];
+  }
+
+  private extractFirstText(value: unknown): string {
+    if (!value) return '';
+    if (typeof value === 'string') return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (Array.isArray(value)) return value.map((item) => this.extractFirstText(item)).find(Boolean) || '';
+    if (typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      for (const key of ['default', 'es-ES', 'en-GB', 'title', 'subtitle', 'description', 'label']) {
+        const found = this.extractFirstText(record[key]);
+        if (found) return found;
+      }
+      for (const item of Object.values(record)) {
+        const found = this.extractFirstText(item);
+        if (found) return found;
+      }
+    }
+    return '';
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  }
+
+  private clone<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T;
+  }
+
   private replaceComponentSummary(components: SectionSummary[], updated: SectionSummary): SectionSummary[] {
     return components.map((component) => (
       this.isSameComponentLocation(component, updated)
@@ -1052,7 +1259,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   public hasUnsavedSelectedSectionChanges(): boolean {
-    const original = this.selectedLanding?.raw?.sections?.[this.selectedSectionIndex];
+    const original = this.savedLandingRaw?.sections?.[this.selectedSectionIndex];
     if (!original || !this.selectedSectionJson.trim()) return false;
 
     return this.sectionJson.hasUnsavedChanges(original, this.selectedSectionJson);
@@ -1063,6 +1270,7 @@ export class App implements OnInit, OnDestroy {
       this.selectedLanding?.raw?.sections,
       this.selectedSectionIndex
     );
+    this.selectedSectionUndoStack = [];
     this.sectionJsonError = '';
     this.autoRefreshPauseNotified = false;
     this.refresh();

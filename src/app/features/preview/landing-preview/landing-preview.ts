@@ -530,23 +530,25 @@ export class LandingPreviewComponent implements OnChanges {
   private renderBannerUnit(banner: unknown): string {
     const media = this.mediaFor(banner, this.activeSize());
     const mediaHtml = media ? this.renderMedia(media, 'st-unit-banner') : '';
+    const label = this.renderTextNode(this.asRecord(banner)['label'], 'label', 'unit-banner');
     const content = this.renderBannerContent(banner);
     const wrapperClasses = this.bannerWrapperClasses(banner);
 
     return `<div${this.idAttr(banner)} class="${this.classAttr(['st-unit-banner', ...this.customClasses(banner)])}" style="${this.styleAttr(banner, 'unit-banner')}">
       ${mediaHtml}
-      ${content ? `<div class="${wrapperClasses}"><div class="st-unit-banner__content">${content}</div></div>` : ''}
+      ${content || label ? `<div class="${wrapperClasses}"><div class="st-unit-banner__content">${label}${content}</div></div>` : ''}
     </div>`;
   }
 
   private renderTextUnit(text: unknown): string {
+    const label = this.renderTextNode(this.asRecord(text)['label'], 'label', 'unit-text');
     const hgroup = this.renderTitleHgroup(text, 'unit-text');
     const content = [
       this.renderDescriptionNodes(this.asRecord(text)['description'], 'unit-text'),
       this.renderTextNode(this.asRecord(text)['cta'], 'cta', 'unit-text')
     ].filter(Boolean).join('');
 
-    return `<div${this.idAttr(text)} class="${this.classAttr(['st-unit-text', ...this.customClasses(text)])}" style="${this.styleAttr(text, 'unit-text')}">${hgroup}<div class="st-unit-text__content">${content}</div></div>`;
+    return `<div${this.idAttr(text)} class="${this.classAttr(['st-unit-text', ...this.customClasses(text)])}" style="${this.styleAttr(text, 'unit-text')}">${label}${hgroup}<div class="st-unit-text__content">${content}</div></div>`;
   }
 
   private renderCardContent(value: unknown): string {
@@ -559,8 +561,9 @@ export class LandingPreviewComponent implements OnChanges {
 
   private renderBannerContent(value: unknown): string {
     const hgroup = this.renderTitleHgroup(value, 'unit-banner');
+    const description = this.renderDescriptionNodes(this.asRecord(value)['description'], 'unit-banner');
     const cta = this.renderTextNode(this.asRecord(value)['cta'], 'cta', 'unit-banner');
-    return [hgroup, cta].filter(Boolean).join('');
+    return [hgroup, description, cta].filter(Boolean).join('');
   }
 
   private renderTitleHgroup(value: unknown, unit: 'unit-card' | 'unit-banner' | 'unit-text'): string {
@@ -570,7 +573,7 @@ export class LandingPreviewComponent implements OnChanges {
     return title || subtitle ? `<div class="st-${unit}__hgroup">${title}${subtitle}</div>` : '';
   }
 
-  private renderDescriptionNodes(value: unknown, unit: 'unit-card' | 'unit-text'): string {
+  private renderDescriptionNodes(value: unknown, unit: 'unit-card' | 'unit-banner' | 'unit-text'): string {
     const text = this.localizedText(value);
     if (!text) return '';
 
